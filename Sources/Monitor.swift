@@ -33,7 +33,7 @@ final class TrafficMonitor: ObservableObject {
     @Published var upload: Double = 0
     @Published var period = 0
     @Published var scope: TrafficScope = .internet
-    @Published var showMenuBarSpeed = UserDefaults.standard.object(forKey: "showMenuBarSpeed") as? Bool ?? false {
+    @Published var showMenuBarSpeed = UserDefaults.standard.object(forKey: "showMenuBarSpeed") as? Bool ?? true {
         didSet { UserDefaults.standard.set(showMenuBarSpeed, forKey: "showMenuBarSpeed"); onUpdate?() }
     }
     @Published var selectedNetwork = "__all__"

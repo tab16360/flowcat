@@ -8,6 +8,7 @@ import AppKit
             let pixels = points * scale
             guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { fatalError("Cannot allocate icon bitmap") }
             NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = context
+            NSColor.clear.setFill(); NSRect(x: 0, y: 0, width: pixels, height: pixels).fill(using: .copy)
             BrandIcon.draw(in: NSRect(x: 0, y: 0, width: pixels, height: pixels), application: true)
             NSGraphicsContext.restoreGraphicsState()
             guard let png = bitmap.representation(using: .png, properties: [:]) else { fatalError("Cannot encode icon") }
