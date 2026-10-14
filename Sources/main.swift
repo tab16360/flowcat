@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         }
         refreshStatusItem()
         started = true; monitor.start()
+        UpdateInstaller.acknowledgeLaunch()
     }
     private func refreshStatusItem() {
         guard let button = item.button else { return }
@@ -171,6 +172,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         popover.contentSize = size
     }
     func applicationWillTerminate(_ notification: Notification) { stopOutsideDismissal(); if started { monitor.save() } }
+}
+// Detached updater mode runs before app initialization or the traffic sampler.
+if let index = CommandLine.arguments.firstIndex(of: "--finish-update") {
+    guard CommandLine.arguments.count > index + 1 else { fputs("Missing update plan\n", stderr); exit(2) }
+    var plan: UpdateInstallPlan?
+    do {
+        let data = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        let decoded = try JSONDecoder().decode(UpdateInstallPlan.self, from: data); plan = decoded
+        try UpdateInstaller.finish(decoded); exit(0)
+    } catch {
+        fputs("Update failed: \(error.localizedDescription)\n", stderr)
+        if let plan, plan.relaunch {
+            try? UpdateInstaller.launch(plan.destination)
+            let helperApp = NSApplication.shared; helperApp.setActivationPolicy(.accessory); helperApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert(); alert.messageText = "更新未完成"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "好"); alert.runModal()
+        }
+        exit(1)
+    }
 }
 let app = NSApplication.shared
 if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), CommandLine.arguments.count > index + 1 {

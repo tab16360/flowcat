@@ -12,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash scripts/test.sh
       - run: bash scripts/package.sh
+      - run: bash scripts/test-update-helper.sh
       - uses: actions/upload-artifact@v4
         with:
           name: FlowCat-arm64

@@ -36,3 +36,9 @@ Release workflow 自动检查版本、运行核心检查、构建 arm64 ZIP 并�
 README 图示是带标注的示例，替换为真实截图时去除个人 SSID、应用和路径。不要提交运行历史或个人配置。
 
 当前构建使用临时签名。Developer ID 签名和 Apple 公证需开发者证书与账号，尚未配置；不要把私钥或证书提交仓库。
+
+## 自动替换更新验证
+
+发布流程在打包后运行 `bash scripts/test-update-helper.sh`，使用打包出的真实可执行文件作为独立更新进程，在隔离目录替换应用。`bash scripts/test.sh` 包含安装包路径、摘要、签名团队及事务回滚检查。维护更新器时必须保留 `--finish-update` 计划格式和 `--update-receipt` 启动确认协议的兼容性，避免旧版更新器无法安装新版本。
+
+更新包必须保持根目录 `流量喵.app/`，Release 资产名为 `FlowCat-版本-arm64.zip`，GitHub API 应提供 `sha256:` 摘要及实际大小；缺失可靠摘要时应用拒绝自动安装。

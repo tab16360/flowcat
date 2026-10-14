@@ -16,6 +16,7 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$version"
       - run: bash scripts/test.sh
       - run: bash scripts/package.sh
+      - run: bash scripts/test-update-helper.sh
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
