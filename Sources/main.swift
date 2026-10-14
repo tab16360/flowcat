@@ -20,9 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         if siblings.contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) { NSApp.terminate(nil); return }
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "chart.bar.xaxis", accessibilityDescription: "流量喵")
+            button.image = BrandIcon.menuBar()
             button.imagePosition = .imageLeading
-            button.title = " ↓0 KB/s"
+            button.title = ""
             button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.target = self; button.action = #selector(toggle)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -31,10 +31,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         popover.delegate = self
         monitor.onUpdate = { [weak self] in
             guard let self else { return }
-            self.item.button?.title = self.monitor.paused ? " 暂停" : " ↓\(volume(UInt64(max(0, self.monitor.download))))/s"
-            self.item.button?.toolTip = "流量喵 · 今日 \(volume(self.monitor.ledger.days[DateKeys.day(Date())]?.physical.total ?? 0))"
+            self.refreshStatusItem()
         }
+        refreshStatusItem()
         started = true; monitor.start()
+    }
+    private func refreshStatusItem() {
+        guard let button = item.button else { return }
+        button.imagePosition = monitor.showMenuBarSpeed ? .imageLeading : .imageOnly
+        button.title = monitor.showMenuBarSpeed ? (monitor.paused ? " 暂停" : " ↓\(volume(UInt64(max(0, monitor.download))))/s") : ""
+        button.toolTip = "流量喵\(monitor.paused ? " · 已暂停" : "") · 今日网卡总量 \(volume(monitor.ledger.days[DateKeys.day(Date())]?.physical.total ?? 0))"
+        button.setAccessibilityLabel(monitor.paused ? "流量喵，已暂停" : "流量喵，打开统计面板")
     }
     @objc func toggle() {
         if let event = NSApp.currentEvent,
@@ -73,6 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         menu.addItem(.separator())
         let login = add("登录时自动启动", action: #selector(toggleLogin))
         login.state = monitor.loginEnabled ? .on : .off
+        let speed = add("菜单栏显示网速", action: #selector(toggleMenuBarSpeed))
+        speed.state = monitor.showMenuBarSpeed ? .on : .off
         _ = add("导出 CSV…", action: #selector(exportCSV))
         _ = add("检查更新…", action: #selector(checkUpdates))
         menu.addItem(.separator())
@@ -127,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         menuObservers.removeAll(); menuDepth = 0
     }
     @MainActor @objc private func checkUpdates() { UpdateChecker.shared.check() }
+    @objc private func toggleMenuBarSpeed() { monitor.showMenuBarSpeed.toggle() }
     @objc private func toggleRecording() { monitor.togglePause() }
     @objc private func exportCSV() {
         NSApp.activate(ignoringOtherApps: true)

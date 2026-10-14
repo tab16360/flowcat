@@ -61,7 +61,7 @@ struct LedgerView: View {
     }
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: "chart.bar.xaxis")
+            Image(nsImage: BrandIcon.menuBar()).renderingMode(.template).resizable().scaledToFit().frame(width: 18, height: 18)
                 .font(.system(size: 15, weight: .semibold)).foregroundStyle(palette.accent)
                 .frame(width: 30, height: 30).background(palette.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 8)).accessibilityHidden(true)
@@ -76,6 +76,7 @@ struct LedgerView: View {
             }.buttonStyle(.plain).help(monitor.paused ? "继续记录" : "暂停记录")
                 .accessibilityLabel(monitor.paused ? "继续记录" : "暂停记录")
             Menu {
+                Toggle("菜单栏显示网速", isOn: $monitor.showMenuBarSpeed)
                 Toggle("登录时自动启动", isOn: Binding(get: { monitor.loginEnabled }, set: { setLogin($0) }))
                 Button("导出 CSV…") { monitor.export() }
                 Button("检查更新…") { UpdateChecker.shared.check() }
