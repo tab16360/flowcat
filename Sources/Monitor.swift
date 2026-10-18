@@ -27,6 +27,8 @@ func command(_ path: String, _ arguments: [String]) -> CommandResult {
         error: String(decoding: stderr, as: UTF8.self), success: process.terminationStatus == 0)
 }
 final class TrafficMonitor: ObservableObject {
+    let disk: DiskMonitor
+    @Published var diskTab = false
     @Published var ledger: Ledger
     @Published var status = "正在开始采集…"
     @Published var download: Double = 0
@@ -62,6 +64,7 @@ final class TrafficMonitor: ObservableObject {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("流量账本", isDirectory: true) // Keep the existing history directory across the rename.
         self.file = file ?? directory.appendingPathComponent("ledger.json")
+        self.disk = DiskMonitor(file: self.file.deletingLastPathComponent().appendingPathComponent("disk-ledger.json"))
         if FileManager.default.fileExists(atPath: self.file.path) {
             do { self.ledger = try JSONDecoder().decode(Ledger.self, from: Data(contentsOf: self.file)) }
             catch {
@@ -91,6 +94,9 @@ final class TrafficMonitor: ObservableObject {
         else { try SMAppService.mainApp.unregister() }
     }
     func clearIcons() { icons.removeAll(); iconOrder.removeAll() }
+    func loadDiskIcon(_ name: String, path: String) {
+        if path.hasSuffix(".app") { appPaths[name] = path; loadIcon(name) }
+    }
     func loadIcon(_ name: String) {
         guard icons[name] == nil, let path = appPaths[name] else { return }
         let thumbnail: NSImage? = autoreleasepool {
@@ -116,17 +122,18 @@ final class TrafficMonitor: ObservableObject {
         sample()
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.sample() }
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.oldTime = nil; self?.sample()
+            self?.oldTime = nil; self?.disk.reset(); self?.sample()
         }
     }
     func togglePause() {
-        paused.toggle(); oldTime = nil
+        paused.toggle(); oldTime = nil; disk.setPaused(paused)
         download = 0; upload = 0
         status = paused ? "已暂停统计" : "正在恢复采集…"
         if !paused { sample() }
         onUpdate?()
     }
     func sample() {
+        disk.sample()
         guard !inFlight && !paused else { return }
         inFlight = true
         let context = detector.current()
@@ -208,6 +215,7 @@ final class TrafficMonitor: ObservableObject {
         onUpdate?()
     }
     func save() {
+        disk.save()
         guard storeWritable else { status = "旧历史无法读取且备份失败，已停止写入以保留原件"; return }
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)

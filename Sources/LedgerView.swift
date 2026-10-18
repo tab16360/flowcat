@@ -2,7 +2,10 @@ import AppKit
 import SwiftUI
 import ServiceManagement
 
-private struct Palette {
+// Disambiguate the property wrapper from the newer SDK macro with the same name.
+typealias ViewState<Value> = SwiftUI.State<Value>
+
+struct Palette {
     let dark: Bool
     var background: Color { color(0xF5F7FA, 0x191D24) }
     var surface: Color { color(0xFFFFFF, 0x252B34) }
@@ -11,6 +14,10 @@ private struct Palette {
     var border: Color { color(0xD6DDE7, 0x414B59) }
     var track: Color { color(0xE2E8F1, 0x394351) }
     var accent: Color { color(0x245CC4, 0x9DBEFF) }
+    var success: Color { color(0x186744, 0x9BD9B7) }
+    var successSurface: Color { color(0xE9F4EE, 0x243B31) }
+    var warning: Color { color(0x895013, 0xF2C68C) }
+    var warningSurface: Color { color(0xFFF2DF, 0x3D3023) }
     private func color(_ light: UInt32, _ darkValue: UInt32) -> Color {
         let rgb = dark ? darkValue : light
         return Color(red: Double((rgb >> 16) & 255) / 255, green: Double((rgb >> 8) & 255) / 255, blue: Double(rgb & 255) / 255)
@@ -21,11 +28,11 @@ struct LedgerView: View {
     @ObservedObject var monitor: TrafficMonitor
     var panelSize = CGSize(width: 460, height: 640)
     @Environment(\.colorScheme) private var scheme
-    @State private var search = ""
-    @State private var explanation = false
-    @State private var order = 0
-    @State private var showRelays = false
-    @State private var loginError = ""
+    @ViewState private var search = ""
+    @ViewState private var explanation = false
+    @ViewState private var order = 0
+    @ViewState private var showRelays = false
+    @ViewState private var loginError = ""
     private var palette: Palette { Palette(dark: scheme == .dark) }
     private var compact: Bool { panelSize.height < 540 }
     private var record: DayRecord { monitor.selected }
@@ -50,26 +57,58 @@ struct LedgerView: View {
         .background(palette.background)
     }
     private var content: some View {
-        VStack(spacing: compact ? 12 : 16) {
+        VStack(spacing: compact ? 10 : 12) {
             header
-            filters
-            summary
-            if hasError { errorBanner }
-            processSection
-            footer
-        }.padding(compact ? 14 : 18)
+            HStack(alignment: .top, spacing: 8) {
+                HStack(spacing: 18) {
+                    navigationTab("网络", symbol: "arrow.up.right", disk: false)
+                    navigationTab("磁盘", symbol: "internaldrive", disk: true)
+                }
+                Spacer(minLength: 4)
+                if monitor.diskTab { DiskModePicker(disk: monitor.disk) }
+                else {
+                    PanelSegments(selection: $monitor.scope,
+                        options: [(TrafficScope.all, "全部流量"), (.internet, "互联网"), (.local, "局域网")],
+                        label: "流量范围", horizontalPadding: panelSize.width < 380 ? 6 : 9)
+                }
+            }.padding(.bottom, 1).overlay(alignment: .bottom) {
+                Rectangle().fill(palette.border).frame(height: 0.5)
+            }
+            if monitor.diskTab {
+                DiskView(disk: monitor.disk, monitor: monitor, panelSize: panelSize)
+            } else {
+                VStack(spacing: 10) {
+                    filters
+                    summary
+                    if hasError { errorBanner }
+                    processSection
+                    footer
+                }.frame(minHeight: 0, maxHeight: .infinity)
+            }
+        }.padding(compact ? 14 : 17)
+    }
+    private func navigationTab(_ title: String, symbol: String, disk: Bool) -> some View {
+        Button { monitor.diskTab = disk } label: {
+            Label(title, systemImage: symbol).font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(monitor.diskTab == disk ? palette.accent : palette.secondary)
+                .padding(.horizontal, 2).padding(.bottom, 10).padding(.top, 3)
+                .overlay(alignment: .bottom) {
+                    if monitor.diskTab == disk { Rectangle().fill(palette.accent).frame(height: 2) }
+                }.contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityLabel("查看\(title)监控")
+            .accessibilityAddTraits(monitor.diskTab == disk ? .isSelected : [])
     }
     private var header: some View {
         HStack(spacing: 10) {
-            Image(nsImage: BrandIcon.menuBar()).renderingMode(.template).resizable().scaledToFit().frame(width: 18, height: 18)
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(palette.accent)
-                .frame(width: 30, height: 30).background(palette.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 8)).accessibilityHidden(true)
+            Image(nsImage: BrandIcon.menuBar()).renderingMode(.template).resizable().scaledToFit().frame(width: 27, height: 27)
+                .foregroundStyle(palette.accent).accessibilityHidden(true)
             Text("流量喵").font(.system(size: 14, weight: .semibold))
             Spacer()
-            Label(monitor.paused ? "已暂停" : hasError ? "采集异常" : monitor.lastSample == nil ? "准备中" : "记录中",
-                  systemImage: monitor.paused ? "pause.circle" : hasError ? "exclamationmark.circle" : "record.circle")
-                .font(.system(size: 11)).foregroundStyle(palette.secondary)
+            if monitor.diskTab { DiskStatusLabel(disk: monitor.disk, paused: monitor.paused) }
+            else {
+                PanelRecordingStatus(title: monitor.paused ? "已暂停" : hasError ? "采集异常" : monitor.lastSample == nil ? "准备中" : "记录中",
+                    warning: hasError, paused: monitor.paused)
+            }
             Button { monitor.togglePause() } label: {
                 Image(systemName: monitor.paused ? "play.fill" : "pause.fill").font(.system(size: 11))
                     .frame(width: 27, height: 27).background(palette.surface).clipShape(RoundedRectangle(cornerRadius: 7))
@@ -77,8 +116,9 @@ struct LedgerView: View {
                 .accessibilityLabel(monitor.paused ? "继续记录" : "暂停记录")
             Menu {
                 Toggle("菜单栏显示网速", isOn: $monitor.showMenuBarSpeed)
+                DiskSpeedToggle(disk: monitor.disk)
                 Toggle("登录时自动启动", isOn: Binding(get: { monitor.loginEnabled }, set: { setLogin($0) }))
-                Button("导出 CSV…") { monitor.export() }
+                Button("导出 CSV…") { if monitor.diskTab { monitor.disk.export() } else { monitor.export() } }
                 Button("检查更新…") { UpdateChecker.shared.check() }
                 Divider()
                 Button("退出流量喵") { monitor.save(); NSApp.terminate(nil) }
@@ -90,39 +130,40 @@ struct LedgerView: View {
     }
     private var filters: some View {
         VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 12) {
-                Picker("统计时间", selection: $monitor.period) {
-                    Text("今日").tag(0); Text("昨日").tag(1); Text("本月").tag(2)
-                }.pickerStyle(.segmented).labelsHidden().controlSize(.regular)
-                    .frame(maxWidth: .infinity, alignment: .leading).frame(height: 28)
-                    .accessibilityLabel("统计时间")
-                Picker("统计网络", selection: $monitor.selectedNetwork) {
-                    Text("全部网络").tag("__all__")
-                    ForEach(monitor.networkNames, id: \.self) { Text($0).tag($0) }
-                }.labelsHidden().controlSize(.regular)
-                    .frame(width: min(144, panelSize.width * 0.32), height: 28)
-                    .help("按 Wi-Fi 名称筛选历史流量").accessibilityLabel("统计网络")
+            HStack(spacing: 8) {
+                PanelSegments(selection: $monitor.period,
+                    options: [(0, "今日"), (1, "昨日"), (2, "本月")], label: "统计时间")
+                Spacer(minLength: 0)
+                PanelMenu(entries: networkEntries) {
+                    HStack(spacing: 7) {
+                        Text(networkName).lineLimit(1).truncationMode(.middle)
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 8))
+                    }.font(.system(size: 11)).foregroundStyle(palette.text)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .frame(minWidth: 98, maxWidth: min(144, panelSize.width*0.34))
+                        .background(palette.surface).clipShape(RoundedRectangle(cornerRadius: 5))
+                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(palette.border, lineWidth: 0.5))
+                }.fixedSize(horizontal: false, vertical: true)
+                    .help("按真实 Wi-Fi 名称筛选；无法识别网络时按全部网络记录。")
+                    .accessibilityLabel("统计网络，\(networkName)")
             }
-            HStack(spacing: 10) {
-                Picker("流量范围", selection: $monitor.scope) {
-                    Text("全部流量").tag(TrafficScope.all)
-                    Text("互联网").tag(TrafficScope.internet)
-                    Text("局域网").tag(TrafficScope.local)
-                }.pickerStyle(.segmented).labelsHidden().controlSize(.small).accessibilityLabel("流量范围")
-                    .frame(width: min(204, panelSize.width * 0.46), alignment: .leading)
-                Button {
-                    if monitor.currentNetwork.identified { monitor.selectedNetwork = monitor.currentNetwork.name }
-                } label: {
-                    Label(monitor.currentNetwork.identified ? "当前连接 · \(monitor.currentNetwork.name)" : "正在按全部网络记录",
-                          systemImage: monitor.currentNetwork.identified ? "wifi" : "network")
-                        .font(.system(size: 11)).foregroundStyle(palette.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                }.buttonStyle(.plain).disabled(!monitor.currentNetwork.identified)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .help(monitor.currentNetwork.identified ? "查看当前 Wi-Fi 的流量：\(monitor.currentNetwork.name)" : "无法识别网络时按全部网络记录")
-                    .accessibilityLabel(monitor.currentNetwork.identified ? "切换到当前网络 \(monitor.currentNetwork.name)" : "正在按全部网络记录")
+            if monitor.currentNetwork.identified {
+                HStack {
+                    Spacer(minLength: 0)
+                    Button { monitor.selectedNetwork = monitor.currentNetwork.name } label: {
+                        Label("当前连接 · \(monitor.currentNetwork.name)", systemImage: "wifi")
+                            .font(.system(size: 11)).foregroundStyle(palette.secondary)
+                            .lineLimit(1).truncationMode(.middle)
+                    }.buttonStyle(.plain).help("查看当前 Wi-Fi 的流量：\(monitor.currentNetwork.name)")
+                        .accessibilityLabel("切换到当前网络 \(monitor.currentNetwork.name)")
+                }
             }
         }
+    }
+    private var networkEntries: [(String, () -> Void)] {
+        var entries: [(String, () -> Void)] = [("全部网络", { monitor.selectedNetwork = "__all__" })]
+        for name in monitor.networkNames { entries.append((name, { monitor.selectedNetwork = name })) }
+        return entries
     }
     private var summary: some View {
         VStack(alignment: .leading, spacing: 12) {

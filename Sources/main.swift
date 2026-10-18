@@ -33,14 +33,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
             guard let self else { return }
             self.refreshStatusItem()
         }
+        monitor.disk.onUpdate = { [weak self] in self?.refreshStatusItem() }
         refreshStatusItem()
         started = true; monitor.start()
         UpdateInstaller.acknowledgeLaunch()
     }
     private func refreshStatusItem() {
         guard let button = item.button else { return }
-        button.imagePosition = monitor.showMenuBarSpeed ? .imageLeading : .imageOnly
-        button.title = monitor.showMenuBarSpeed ? (monitor.paused ? " 暂停" : " ↓\(volume(UInt64(max(0, monitor.download))))/s") : ""
+        let showSpeed = monitor.showMenuBarSpeed || monitor.disk.showMenuBarDiskSpeed
+        button.imagePosition = showSpeed ? .imageLeading : .imageOnly
+        var labels: [String] = []
+        if showSpeed && monitor.paused { labels = ["暂停"] }
+        else {
+            if monitor.showMenuBarSpeed { labels.append("↓\(volume(UInt64(max(0, monitor.download))))/s") }
+            if monitor.disk.showMenuBarDiskSpeed {
+                labels.append("读\(diskVolume(UInt64(max(0, monitor.disk.readRate))))/s 写\(diskVolume(UInt64(max(0, monitor.disk.writeRate))))/s")
+            }
+        }
+        button.title = labels.isEmpty ? "" : " " + labels.joined(separator: "  ")
         button.toolTip = "流量喵\(monitor.paused ? " · 已暂停" : "") · 今日网卡总量 \(volume(monitor.ledger.days[DateKeys.day(Date())]?.physical.total ?? 0))"
         button.setAccessibilityLabel(monitor.paused ? "流量喵，已暂停" : "流量喵，打开统计面板")
     }
@@ -83,6 +93,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         login.state = monitor.loginEnabled ? .on : .off
         let speed = add("菜单栏显示网速", action: #selector(toggleMenuBarSpeed))
         speed.state = monitor.showMenuBarSpeed ? .on : .off
+        let diskSpeed = add("菜单栏显示磁盘读写", action: #selector(toggleMenuBarDiskSpeed))
+        diskSpeed.state = monitor.disk.showMenuBarDiskSpeed ? .on : .off
         _ = add("导出 CSV…", action: #selector(exportCSV))
         _ = add("检查更新…", action: #selector(checkUpdates))
         menu.addItem(.separator())
@@ -137,11 +149,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         menuObservers.removeAll(); menuDepth = 0
     }
     @MainActor @objc private func checkUpdates() { UpdateChecker.shared.check() }
+    @objc private func toggleMenuBarDiskSpeed() { monitor.disk.showMenuBarDiskSpeed.toggle() }
     @objc private func toggleMenuBarSpeed() { monitor.showMenuBarSpeed.toggle() }
     @objc private func toggleRecording() { monitor.togglePause() }
     @objc private func exportCSV() {
         NSApp.activate(ignoringOtherApps: true)
-        monitor.export()
+        if monitor.diskTab { monitor.disk.export() } else { monitor.export() }
     }
     @objc private func toggleLogin() {
         do { try monitor.setLogin(!monitor.loginEnabled) }
@@ -193,6 +206,25 @@ if let index = CommandLine.arguments.firstIndex(of: "--finish-update") {
         exit(1)
     }
 }
+if CommandLine.arguments.contains("--disk-diagnostics") {
+    let start = Date(), first = DiskSampler.capture()
+    let samplingMS = Date().timeIntervalSince(start)*1000
+    Thread.sleep(forTimeInterval: 1)
+    var accumulator = DiskAccumulator(), history = DiskLedger()
+    _ = accumulator.apply(first, ledger: &history)
+    let delta = accumulator.apply(DiskSampler.capture(), ledger: &history) ?? DiskBytes()
+    let hardware = try DiskHardware.read()
+    let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    print("Processes: \(first.counters.count), denied: \(first.denied), sample: \(String(format: "%.2f", samplingMS)) ms")
+    print("Observed one-second delta: read \(delta.read), written \(delta.written)")
+    for device in hardware {
+        var native = FCNVMeHealth()
+        let status = device.id.withCString { fc_read_nvme($0, &native) }
+        print("Native NVMe \(device.id): status=\(status), error=\(String(native.error, radix: 16)), temperature=\(native.temperature), used=\(native.used)")
+    }
+    print(String(decoding: try encoder.encode(hardware), as: UTF8.self))
+    exit(0)
+}
 let app = NSApplication.shared
 if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), CommandLine.arguments.count > index + 1 {
     let destination = URL(fileURLWithPath: CommandLine.arguments[index + 1])
@@ -205,10 +237,36 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
                     "verge-mihomo": Bytes(received: 78000000, sent: 80000000),
                     "Tailscale": Bytes(received: 33000000, sent: 8500000),
                     "ChatGPT": Bytes(received: 35000000, sent: 16000000)], seconds: 14400)
+    preview.disk.isPreview = true
+    if CommandLine.arguments.contains("--disk") {
+        preview.diskTab = true
+        preview.disk.healthView = CommandLine.arguments.contains("--health")
+        let now = Date(), day = DateKeys.day(now)
+        let uses: [String: DiskProcessUsage] = [
+            "/Applications/Google Chrome.app": DiskProcessUsage(name: "Google Chrome", path: "/Applications/Google Chrome.app", bytes: DiskBytes(read: 4_110_000_000, written: 12_840_000_000)),
+            "kernel_task": DiskProcessUsage(name: "kernel_task", path: "kernel_task", bytes: DiskBytes(read: 2_340_000_000, written: 6_120_000_000)),
+            "/Applications/Cursor.app": DiskProcessUsage(name: "Cursor", path: "/Applications/Cursor.app", bytes: DiskBytes(read: 1_620_000_000, written: 2_970_000_000)),
+            "mds_stores": DiskProcessUsage(name: "mds_stores", path: "/System/Library/mds_stores", bytes: DiskBytes(read: 2_740_000_000, written: 1_660_000_000))]
+        var record = DiskDay(processes: uses, seconds: 30360)
+        let start = Calendar.current.startOfDay(for: now)
+        for hour in 0..<24 {
+            let date = Calendar.current.date(byAdding: .hour, value: hour, to: start)!
+            if date <= now { record.hours[String(Int(date.timeIntervalSince1970))] = DiskBucket(bytes: DiskBytes(written: UInt64((hour*19+13)%65)*1_000_000), seconds: 600) }
+        }
+        preview.disk.ledger.days[day] = record
+        preview.disk.readRate = 1_280_000; preview.disk.writeRate = 640_000
+        preview.disk.sampledProcesses = 628; preview.disk.denied = 12
+        preview.disk.lastSample = now
+        preview.disk.devices = [DiskDevice(id: "disk0", name: "APPLE SSD AP0512Q", model: "APPLE SSD AP0512Q", internalDisk: true, capacity: 512_000_000_000, solidState: true, status: .normal, message: "磁盘自身报告未检测到硬件警告。", temperature: 38, enduranceUsed: 3, availableSpare: 100, hostRead: 12_760_000_000_000, hostWritten: 8_420_000_000_000, powerOnHours: 1286, mediaErrors: 0)]
+        preview.disk.selectedDevice = "disk0"
+        if CommandLine.arguments.contains("--empty") { preview.disk.ledger.days = [:] }
+    }
     preview.download = 219000; preview.upload = 2400
     preview.status = "界面预览 · 示例数据"
-    let view = NSHostingView(rootView: LedgerView(monitor: preview))
-    view.frame = NSRect(x: 0, y: 0, width: 460, height: 650)
+    if CommandLine.arguments.contains("--dark") { app.appearance = NSAppearance(named: .darkAqua) }
+    let size = CGSize(width: CommandLine.arguments.contains("--narrow") ? 342 : 460, height: CommandLine.arguments.contains("--short") ? 452 : 640)
+    let view = NSHostingView(rootView: LedgerView(monitor: preview, panelSize: size))
+    view.frame = NSRect(origin: .zero, size: size)
     let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
     window.contentView = view
     view.layoutSubtreeIfNeeded()

@@ -6,7 +6,8 @@ case "$arch" in arm64|x86_64) ;; *) echo "ARCH must be arm64 or x86_64" >&2; exi
 app="build/流量喵.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 export CLANG_MODULE_CACHE_PATH="${TMPDIR:-/tmp}/trafficledger-clang-cache"
-xcrun swiftc -swift-version 5 -O -target "$arch-apple-macosx13.0" -module-cache-path "$CLANG_MODULE_CACHE_PATH" Sources/*.swift -o "$app/Contents/MacOS/FlowCat" -framework AppKit -framework SwiftUI -framework ServiceManagement -framework CoreWLAN -framework CoreLocation
+xcrun clang -O2 -target "$arch-apple-macosx13.0" -c Sources/HardwareBridge.c -o build/HardwareBridge.o
+xcrun swiftc -import-objc-header Sources/HardwareBridge.h build/HardwareBridge.o -swift-version 5 -O -target "$arch-apple-macosx13.0" -module-cache-path "$CLANG_MODULE_CACHE_PATH" Sources/*.swift -o "$app/Contents/MacOS/FlowCat" -framework AppKit -framework SwiftUI -framework ServiceManagement -framework CoreWLAN -framework CoreLocation -framework IOKit
 cp Info.plist "$app/Contents/Info.plist"
 cp assets/FlowCat.icns "$app/Contents/Resources/FlowCat.icns"
 codesign --force --sign - "$app"
