@@ -41,18 +41,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
     private func refreshStatusItem() {
         guard let button = item.button else { return }
         let showSpeed = monitor.showMenuBarSpeed || monitor.disk.showMenuBarDiskSpeed
-        button.imagePosition = showSpeed ? .imageLeading : .imageOnly
-        var labels: [String] = []
-        if showSpeed && monitor.paused { labels = ["暂停"] }
-        else {
-            if monitor.showMenuBarSpeed { labels.append("↓\(volume(UInt64(max(0, monitor.download))))/s") }
-            if monitor.disk.showMenuBarDiskSpeed {
-                labels.append("读\(diskVolume(UInt64(max(0, monitor.disk.readRate))))/s 写\(diskVolume(UInt64(max(0, monitor.disk.writeRate))))/s")
-            }
+        let network = "↓\(volume(UInt64(max(0, monitor.download))))/s"
+        let reading = "\(diskVolume(UInt64(max(0, monitor.disk.readRate))))/s"
+        let writing = "\(diskVolume(UInt64(max(0, monitor.disk.writeRate))))/s"
+        if monitor.disk.showMenuBarDiskSpeed && !monitor.paused {
+            button.title = ""
+            button.imagePosition = .imageOnly
+            button.imageScaling = .scaleNone
+            button.image = MenuBarSpeeds.image(network: monitor.showMenuBarSpeed ? network : nil, read: reading, write: writing)
+        } else {
+            button.image = BrandIcon.menuBar()
+            button.imagePosition = showSpeed ? .imageLeading : .imageOnly
+            button.title = showSpeed && monitor.paused ? " 暂停" : monitor.showMenuBarSpeed ? " " + network : ""
         }
-        button.title = labels.isEmpty ? "" : " " + labels.joined(separator: "  ")
         button.toolTip = "流量喵\(monitor.paused ? " · 已暂停" : "") · 今日网卡总量 \(volume(monitor.ledger.days[DateKeys.day(Date())]?.physical.total ?? 0))"
-        button.setAccessibilityLabel(monitor.paused ? "流量喵，已暂停" : "流量喵，打开统计面板")
+        if monitor.disk.showMenuBarDiskSpeed {
+            button.toolTip = (button.toolTip ?? "流量喵") + "\n磁盘读取 \(reading)，写入 \(writing)"
+        }
+        button.setAccessibilityLabel(monitor.paused ? "流量喵，已暂停" : monitor.disk.showMenuBarDiskSpeed ? "流量喵，磁盘读取 \(reading)，写入 \(writing)，打开统计面板" : "流量喵，打开统计面板")
     }
     @objc func toggle() {
         if let event = NSApp.currentEvent,
@@ -226,6 +232,14 @@ if CommandLine.arguments.contains("--disk-diagnostics") {
     exit(0)
 }
 let app = NSApplication.shared
+if let index = CommandLine.arguments.firstIndex(of: "--render-menu-preview"), CommandLine.arguments.count > index + 1 {
+    let image = MenuBarSpeeds.preview()
+    if let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+       let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) {
+        try png.write(to: URL(fileURLWithPath: CommandLine.arguments[index+1]))
+    }
+    exit(0)
+}
 if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), CommandLine.arguments.count > index + 1 {
     let destination = URL(fileURLWithPath: CommandLine.arguments[index + 1])
     let preview = TrafficMonitor(file: destination.deletingLastPathComponent().appendingPathComponent("preview-ledger-unused.json"))
