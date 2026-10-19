@@ -68,6 +68,7 @@ struct LedgerView: View {
                 }
                 Spacer(minLength: 4)
                 if monitor.diskTab { DiskModePicker(disk: monitor.disk) }
+                else if monitor.currentNetwork.identified { currentConnection }
 
             }.padding(.bottom, 1).overlay(alignment: .bottom) {
                 Rectangle().fill(palette.border).frame(height: 0.5)
@@ -145,18 +146,17 @@ struct LedgerView: View {
                     .help("按真实 Wi-Fi 名称筛选；无法识别网络时按全部网络记录。")
                     .accessibilityLabel("统计网络，\(networkName)")
             }
-            if monitor.currentNetwork.identified {
-                HStack {
-                    Spacer(minLength: 0)
-                    Button { monitor.selectedNetwork = monitor.currentNetwork.name } label: {
-                        Label("当前连接 · \(monitor.currentNetwork.name)", systemImage: "wifi")
-                            .font(.system(size: 11)).foregroundStyle(palette.secondary)
-                            .lineLimit(1).truncationMode(.middle)
-                    }.buttonStyle(.plain).help("查看当前 Wi-Fi 的流量：\(monitor.currentNetwork.name)")
-                        .accessibilityLabel("切换到当前网络 \(monitor.currentNetwork.name)")
-                }
-            }
         }
+    }
+    private var currentConnection: some View {
+        Button { monitor.selectedNetwork = monitor.currentNetwork.name } label: {
+            Label(panelSize.width < 380 ? monitor.currentNetwork.name : "当前连接 · \(monitor.currentNetwork.name)", systemImage: "wifi")
+                .font(.system(size: 11)).foregroundStyle(palette.secondary)
+                .lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: max(80, panelSize.width - 220), alignment: .trailing)
+                .padding(.top, 3).padding(.bottom, 10)
+        }.buttonStyle(.plain).help("查看当前 Wi-Fi 的流量：\(monitor.currentNetwork.name)")
+            .accessibilityLabel("切换到当前网络 \(monitor.currentNetwork.name)")
     }
     private var networkEntries: [(String, () -> Void)] {
         var entries: [(String, () -> Void)] = [("全部网络", { monitor.selectedNetwork = "__all__" })]

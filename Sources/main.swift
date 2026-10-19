@@ -256,6 +256,10 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
                     "Tailscale": Bytes(received: 33000000, sent: 8500000),
                     "ChatGPT": Bytes(received: 35000000, sent: 16000000)], seconds: 14400, breakdown: previewBreakdown)
     if CommandLine.arguments.contains("--no-lan-data") { preview.ledger.days[DateKeys.day(Date())]?.withoutLAN = nil }
+    if let networkIndex = CommandLine.arguments.firstIndex(of: "--current-network"), networkIndex + 1 < CommandLine.arguments.count {
+        let name = CommandLine.arguments[networkIndex + 1]
+        preview.currentNetwork = NetworkContext(key: "wifi:" + name, name: name, identified: true)
+    }
     preview.disk.isPreview = true
     if CommandLine.arguments.contains("--disk") {
         preview.diskTab = true
