@@ -243,6 +243,10 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-menu-preview"), Co
 if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), CommandLine.arguments.count > index + 1 {
     let destination = URL(fileURLWithPath: CommandLine.arguments[index + 1])
     let preview = TrafficMonitor(file: destination.deletingLastPathComponent().appendingPathComponent("preview-ledger-unused.json"))
+    let originalLANPreference = UserDefaults.standard.object(forKey: "includeLAN")
+    preview.includeLAN = !CommandLine.arguments.contains("--exclude-lan")
+    var previewBreakdown = TrafficBreakdown()
+    previewBreakdown.local = Bytes(received: 1_800_000_000, sent: 90_000_000)
     preview.ledger = Ledger(firstStarted: Date())
     preview.ledger.add(day: DateKeys.day(Date()), physical: Bytes(received: 2630000000, sent: 180000000),
         processes: ["UU远程": Bytes(received: 2400000000, sent: 21000000),
@@ -250,7 +254,8 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
                     "ssh": Bytes(received: 24000000, sent: 6000000),
                     "verge-mihomo": Bytes(received: 78000000, sent: 80000000),
                     "Tailscale": Bytes(received: 33000000, sent: 8500000),
-                    "ChatGPT": Bytes(received: 35000000, sent: 16000000)], seconds: 14400)
+                    "ChatGPT": Bytes(received: 35000000, sent: 16000000)], seconds: 14400, breakdown: previewBreakdown)
+    if CommandLine.arguments.contains("--no-lan-data") { preview.ledger.days[DateKeys.day(Date())]?.withoutLAN = nil }
     preview.disk.isPreview = true
     if CommandLine.arguments.contains("--disk") {
         preview.diskTab = true
@@ -289,6 +294,8 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
         view.cacheDisplay(in: view.bounds, to: bitmap)
         if let png = bitmap.representation(using: .png, properties: [:]) { try png.write(to: destination) }
     }
+    if let originalLANPreference { UserDefaults.standard.set(originalLANPreference, forKey: "includeLAN") }
+    else { UserDefaults.standard.removeObject(forKey: "includeLAN") }
     exit(0)
 }
 let delegate = AppDelegate()

@@ -15,11 +15,17 @@ struct ProcessCounter: Codable {
     var name: String
     var bytes: Bytes
 }
+struct LANExcludedTotal: Codable {
+    var bytes = Bytes()
+    var seconds: Double = 0
+    mutating func add(_ other: LANExcludedTotal) { bytes.add(other.bytes); seconds += other.seconds }
+}
 struct DayRecord: Codable {
     var physical = Bytes()
     var processes: [String: Bytes] = [:]
     var monitoredSeconds: Double = 0
     var breakdown: TrafficBreakdown? = nil
+    var withoutLAN: LANExcludedTotal? = nil
 }
 struct NetworkContext: Equatable {
     var key: String
@@ -31,7 +37,7 @@ struct NetworkHistory: Codable {
     var days: [String: DayRecord] = [:]
 }
 struct Ledger: Codable {
-    var version = 4
+    var version = 5
     var firstStarted: Date
     var days: [String: DayRecord] = [:]
     var networks: [String: NetworkHistory] = [:]
@@ -50,6 +56,9 @@ struct Ledger: Codable {
     mutating func add(day: String, physical: Bytes, processes: [String: Bytes], seconds: Double,
                       network: NetworkContext = NetworkContext(key: "__all__", name: "全部网络", identified: false),
                       breakdown: TrafficBreakdown? = nil) {
+        // Subtract only observed physical-interface LAN deltas from the same interval.
+        // Clamp each direction independently; never infer older intervals from aggregate history.
+        let withoutLAN = breakdown.map { LANExcludedTotal(bytes: physical.difference(from: $0.local), seconds: seconds) }
         var record = days[day] ?? DayRecord()
         record.physical.add(physical)
         record.monitoredSeconds += seconds
@@ -59,6 +68,7 @@ struct Ledger: Codable {
             record.processes[name] = bytes
         }
         if let breakdown { var value = record.breakdown ?? TrafficBreakdown(); value.add(breakdown); record.breakdown = value }
+        if let withoutLAN { var value = record.withoutLAN ?? LANExcludedTotal(); value.add(withoutLAN); record.withoutLAN = value }
         days[day] = record
         guard network.identified, network.key.hasPrefix("wifi:") else { return }
         var history = networks[network.key] ?? NetworkHistory(name: network.name)
@@ -69,6 +79,7 @@ struct Ledger: Codable {
             var bytes = netDay.processes[name] ?? Bytes(); bytes.add(value); netDay.processes[name] = bytes
         }
         if let breakdown { var value = netDay.breakdown ?? TrafficBreakdown(); value.add(breakdown); netDay.breakdown = value }
+        if let withoutLAN { var value = netDay.withoutLAN ?? LANExcludedTotal(); value.add(withoutLAN); netDay.withoutLAN = value }
         history.days[day] = netDay; networks[network.key] = history
     }
     func sum(keys: [String], networkName: String? = nil) -> DayRecord {
@@ -80,6 +91,7 @@ struct Ledger: Codable {
             guard let day = source[key] else { continue }
             result.physical.add(day.physical)
             result.monitoredSeconds += day.monitoredSeconds
+            if let estimate = day.withoutLAN { var value = result.withoutLAN ?? LANExcludedTotal(); value.add(estimate); result.withoutLAN = value }
             if let breakdown = day.breakdown { var value = result.breakdown ?? TrafficBreakdown(); value.add(breakdown); result.breakdown = value }
             for (name, bytes) in day.processes {
                 var value = result.processes[name] ?? Bytes()

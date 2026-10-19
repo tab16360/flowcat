@@ -150,6 +150,19 @@ expect(scopedRestored.sum(keys: ["2026-10-10"]).breakdown?.local.sent == 20, "sc
 expect(restored.sum(keys: monthKeys).breakdown == nil && restored.sum(keys: monthKeys).scoped(.internet).monitoredSeconds == 0, "old history cannot fabricate internet classification or coverage")
 scopedLedger.add(day: "2026-10-10", physical: Bytes(sent: 3000), processes: [:], seconds: 30)
 expect(scopedLedger.sum(keys: ["2026-10-10"]).monitoredSeconds == 40 && scopedLedger.sum(keys: ["2026-10-10"]).scoped(.internet).monitoredSeconds == 10, "mixed old and new history reports classification coverage without rewriting old totals")
+expect(scopedRecord.withoutLAN?.bytes.sent == 980 && scopedRecord.withoutLAN?.seconds == 10, "LAN exclusion uses same-interval physical total minus observed LAN")
+expect(scopedRestored.sum(keys: ["2026-10-10"]).withoutLAN?.bytes.sent == 980, "LAN-excluded total and coverage survive persistence")
+expect(restored.sum(keys: monthKeys).withoutLAN == nil, "legacy histories show unavailable LAN-excluded totals rather than invented zero")
+let mixedLAN = scopedLedger.sum(keys: ["2026-10-10"])
+expect(mixedLAN.withoutLAN?.bytes.sent == 980 && mixedLAN.withoutLAN?.seconds == 10 && mixedLAN.physical.sent == 4000, "legacy and new intervals keep separate estimation coverage and original totals")
+expect(mixedLAN.processes["kernel_task"]?.sent == 900, "total LAN toggle never filters app counters")
+var lanIntervals = Ledger(firstStarted: date)
+var largeLAN = TrafficBreakdown(); largeLAN.local = Bytes(received: 400, sent: 20)
+lanIntervals.add(day: "2026-10-10", physical: Bytes(received: 200, sent: 100), processes: [:], seconds: 10, network: NetworkContext(key: "wifi:Home", name: "Home", identified: true), breakdown: largeLAN)
+expect(lanIntervals.days["2026-10-10"]?.withoutLAN?.bytes == Bytes(received: 0, sent: 80), "LAN subtraction clamps download and upload independently without underflow")
+lanIntervals.add(day: "2026-10-10", physical: Bytes(received: 100, sent: 50), processes: [:], seconds: 10, network: NetworkContext(key: "wifi:Other", name: "Other", identified: true), breakdown: TrafficBreakdown())
+expect(lanIntervals.sum(keys: ["2026-10-10"]).withoutLAN?.bytes == Bytes(received: 100, sent: 130), "LAN subtraction clamps per interval before aggregation")
+expect(lanIntervals.sum(keys: ["2026-10-10"], networkName: "Home").withoutLAN?.bytes == Bytes(received: 0, sent: 80) && lanIntervals.sum(keys: ["2026-10-10"], networkName: "Other").withoutLAN?.bytes.received == 100, "LAN-excluded totals remain separated by actual Wi-Fi")
 let subnetText = """
 en0: flags=8863<UP> mtu 1500
     inet 192.168.20.181 netmask 0xffffff00 broadcast 192.168.20.255

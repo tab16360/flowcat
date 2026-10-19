@@ -34,7 +34,9 @@ final class TrafficMonitor: ObservableObject {
     @Published var download: Double = 0
     @Published var upload: Double = 0
     @Published var period = 0
-    @Published var scope: TrafficScope = .all
+    @Published var includeLAN = UserDefaults.standard.object(forKey: "includeLAN") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(includeLAN, forKey: "includeLAN") }
+    }
     @Published var showMenuBarSpeed = UserDefaults.standard.object(forKey: "showMenuBarSpeed") as? Bool ?? true {
         didSet { UserDefaults.standard.set(showMenuBarSpeed, forKey: "showMenuBarSpeed"); onUpdate?() }
     }
@@ -80,7 +82,7 @@ final class TrafficMonitor: ObservableObject {
     }
     var selected: DayRecord {
         ledger.sum(keys: DateKeys.keys(period: period, now: Date(), available: Array(ledger.days.keys)),
-                   networkName: selectedNetwork == "__all__" ? nil : selectedNetwork).scoped(scope)
+                   networkName: selectedNetwork == "__all__" ? nil : selectedNetwork)
     }
     var networkNames: [String] {
         guard currentNetwork.identified else { return [] }
@@ -251,18 +253,13 @@ final class TrafficMonitor: ObservableObject {
                 }
             }
         }
-        func scopeCSV(day: String, network: String, record: DayRecord) {
-            guard let b = record.breakdown else { return }
-            for (label, bytes, processes) in [("互联网（连接估算）", b.internet, b.internetProcesses), ("局域网（连接估算）", b.local, b.localProcesses)] {
-                content += "\(day),\(csvField(network)),\(label),\(bytes.received),\(bytes.sent),\(Int(b.seconds))\n"
-                for (name, bytes) in processes.sorted(by: { $0.key < $1.key }) {
-                    content += "\(day),\(csvField(network)),\(csvField(label + " · " + name)),\(bytes.received),\(bytes.sent),\n"
-                }
-            }
+        func estimateCSV(day: String, network: String, record: DayRecord) {
+            guard let estimate = record.withoutLAN else { return }
+            content += "\(day),\(csvField(network)),整机网卡（扣除局域网估算）,\(estimate.bytes.received),\(estimate.bytes.sent),\(Int(estimate.seconds))\n"
         }
-        for (day, record) in ledger.days.sorted(by: { $0.key < $1.key }) { scopeCSV(day: day, network: "全部网络", record: record) }
+        for (day, record) in ledger.days.sorted(by: { $0.key < $1.key }) { estimateCSV(day: day, network: "全部网络", record: record) }
         for history in ledger.networks.values.sorted(by: { $0.name < $1.name }) {
-            for (day, record) in history.days.sorted(by: { $0.key < $1.key }) { scopeCSV(day: day, network: history.name, record: record) }
+            for (day, record) in history.days.sorted(by: { $0.key < $1.key }) { estimateCSV(day: day, network: history.name, record: record) }
         }
         do { try ("\u{FEFF}" + content).write(to: url, atomically: true, encoding: .utf8) }
         catch { status = "导出失败：\(error.localizedDescription)" }

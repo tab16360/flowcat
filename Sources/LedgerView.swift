@@ -36,6 +36,8 @@ struct LedgerView: View {
     private var palette: Palette { Palette(dark: scheme == .dark) }
     private var compact: Bool { panelSize.height < 540 }
     private var record: DayRecord { monitor.selected }
+    private var total: Bytes? { monitor.includeLAN ? record.physical : record.withoutLAN?.bytes }
+    private var totalSeconds: Double { monitor.includeLAN ? record.monitoredSeconds : record.withoutLAN?.seconds ?? 0 }
     private var periodName: String { ["今日", "昨日", "本月"][min(2, max(0, monitor.period))] }
     private var networkName: String { monitor.selectedNetwork == "__all__" ? "全部网络" : monitor.selectedNetwork }
     private var sortName: String { ["总流量", "下载量", "上传量"][order] }
@@ -66,11 +68,7 @@ struct LedgerView: View {
                 }
                 Spacer(minLength: 4)
                 if monitor.diskTab { DiskModePicker(disk: monitor.disk) }
-                else {
-                    PanelSegments(selection: $monitor.scope,
-                        options: [(TrafficScope.all, "全部流量"), (.internet, "互联网"), (.local, "局域网")],
-                        label: "流量范围", horizontalPadding: panelSize.width < 380 ? 6 : 9)
-                }
+
             }.padding(.bottom, 1).overlay(alignment: .bottom) {
                 Rectangle().fill(palette.border).frame(height: 0.5)
             }
@@ -168,39 +166,42 @@ struct LedgerView: View {
     private var summary: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("\(periodName)\(monitor.scope == .all ? "累计" : monitor.scope == .internet ? "互联网" : "局域网")").font(.system(size: 11, weight: .medium)).foregroundStyle(palette.secondary)
+                Text("\(periodName)累计\(monitor.includeLAN ? "" : " · 估算")")
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(palette.secondary)
                 Spacer()
-                Text(String(format: "覆盖 %.1f 小时", record.monitoredSeconds / 3600))
-                    .font(.system(size: 11)).foregroundStyle(palette.secondary).monospacedDigit()
+                Toggle("包含局域网", isOn: $monitor.includeLAN)
+                    .toggleStyle(.switch).controlSize(.mini).font(.system(size: 11))
+                    .help("只切换总量：关闭时扣除已识别的局域网流量（估算），应用排行不受影响。")
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                let parts = volume(record.physical.total).split(separator: " ", maxSplits: 1)
-                Text(String(parts[0])).font(.system(size: compact ? 28 : 34, weight: .semibold, design: .rounded)).monospacedDigit()
-                Text(parts.count > 1 ? String(parts[1]) : "B").font(.system(size: 17, weight: .medium)).foregroundStyle(palette.secondary)
+                let parts = total.map { volume($0.total).split(separator: " ", maxSplits: 1).map(String.init) } ?? ["—"]
+                Text(parts[0]).font(.system(size: compact ? 28 : 34, weight: .semibold, design: .rounded)).monospacedDigit()
+                if parts.count > 1 { Text(parts[1]).font(.system(size: 17, weight: .medium)).foregroundStyle(palette.secondary) }
                 Spacer()
-            }.accessibilityElement(children: .ignore).accessibilityLabel("\(periodName) \(networkName) 总流量 \(volume(record.physical.total))")
-            HStack(spacing: 18) {
-                metricLabel("下载", bytes: record.physical.received, symbol: "arrow.down")
-                metricLabel("上传", bytes: record.physical.sent, symbol: "arrow.up")
+                Text(String(format: "覆盖 %.1f 小时", totalSeconds / 3600))
+                    .font(.system(size: 10)).foregroundStyle(palette.secondary).monospacedDigit()
+            }.accessibilityElement(children: .ignore).accessibilityLabel("\(periodName) \(networkName) \(monitor.includeLAN ? "总流量" : "扣除局域网估算") \(total.map { volume($0.total) } ?? "暂无记录")")
+            if let total {
+                HStack(spacing: 18) {
+                    metricLabel("下载", bytes: total.received, symbol: "arrow.down")
+                    metricLabel("上传", bytes: total.sent, symbol: "arrow.up")
+                }
             }
-            if monitor.scope != .all {
-                Text(record.breakdown == nil ? "此时段没有分项记录；旧历史无法补分。" : "连接估算 · 仅覆盖升级后采样，遗漏短时连接与未知对端；分项不与网卡总量相加。")
-                    .font(.system(size: 10)).foregroundStyle(palette.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("网卡总量包含局域网备份，查看上网消耗请切换互联网。")
-                    .font(.system(size: 10)).foregroundStyle(palette.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(monitor.includeLAN
+                 ? "网卡总量包含局域网传输。开关只影响总量，应用排行保留完整记录。"
+                 : record.withoutLAN == nil ? "此时段暂无扣除记录；升级后开始累计，旧历史保留。"
+                 : "扣除已识别局域网流量（估算），可能遗漏短连接及协议开销；仅覆盖升级后采样。应用排行不筛选。")
+                .font(.system(size: 10)).foregroundStyle(palette.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Rectangle().fill(palette.border).frame(height: 0.5)
             ViewThatFits(in: .horizontal) {
                 HStack {
-                    Text("实时 · 整机").font(.system(size: 11)).foregroundStyle(palette.secondary)
+                    Text("实时 · 整机（含局域网）").font(.system(size: 11)).foregroundStyle(palette.secondary)
                     Spacer()
                     liveRates
                 }
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("实时 · 整机").font(.system(size: 11)).foregroundStyle(palette.secondary)
+                    Text("实时 · 整机（含局域网）").font(.system(size: 11)).foregroundStyle(palette.secondary)
                     liveRates
                 }
             }
@@ -322,7 +323,7 @@ struct LedgerView: View {
             Image(systemName: search.isEmpty ? "chart.bar" : "magnifyingglass").font(.system(size: 23)).foregroundStyle(palette.secondary)
             Text(!search.isEmpty ? "没有匹配的进程" : monitor.paused ? "统计已暂停" : hasError ? "暂时无法读取流量" : monitor.lastSample == nil ? "正在建立统计基线" : showRelays ? "这个时段没有已识别的代理记录" : "这个时段还没有应用记录")
                 .font(.system(size: 12, weight: .medium))
-            Text(!search.isEmpty ? "试试进程名称的一部分。" : monitor.scope != .all ? "分项从升级后累计；无记录不表示实际流量为零。" : "流量从工具运行后累计，未运行的历史无法补算。")
+            Text(!search.isEmpty ? "试试进程名称的一部分。" : "流量从工具运行后累计，未运行的历史无法补算。")
                 .font(.system(size: 11)).foregroundStyle(palette.secondary).multilineTextAlignment(.center)
             if !search.isEmpty { Button("清除搜索") { search = "" }.controlSize(.small) }
             else if monitor.paused { Button("继续记录") { monitor.togglePause() }.controlSize(.small) }
@@ -348,7 +349,7 @@ struct LedgerView: View {
             }.font(.system(size: 11)).foregroundStyle(palette.secondary)
             if explanation {
                 ScrollView {
-                    Text("整机总量来自物理网卡，包含局域网流量，不等于运营商账单。应用与代理转发分开展示，均为进程计数，请勿相加。代理历史无法反推原始应用；没有应用记录不表示没有流量。\n\n互联网／局域网按物理接口连接对端估算，排除本地代理与虚拟接口。未知对端、短时连接、协议开销可能遗漏；VPN 仅统计外层连接，旧历史无法补分。\n\n每 10 秒采样，每分钟保存。网络无法识别时只记录全部。\n\n开始记录：\(monitor.ledger.firstStarted.formatted(date: .numeric, time: .shortened))")
+                    Text("整机总量来自物理网卡，包含局域网流量，不等于运营商账单。应用与代理转发分开展示，均为进程计数，请勿相加。代理历史无法反推原始应用；没有应用记录不表示没有流量。\n\n“包含局域网”只控制总量。关闭后，从同一采样区间的网卡计数中扣除已识别的局域网连接字节；分别按下载、上传归零截断，不把负数带入累计。短连接、协议开销及 VPN 内部流量可能无法剔除，结果不等于精确外网用量。估算从本次升级后累计，旧历史保持原值；应用排行始终显示完整进程计数，不受开关影响。\n\n每 10 秒采样，每分钟保存。网络无法识别时只记录全部。\n\n开始记录：\(monitor.ledger.firstStarted.formatted(date: .numeric, time: .shortened))")
                         .font(.system(size: 11)).foregroundStyle(palette.secondary).lineSpacing(3)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(10)
                 }.frame(height: 96).background(palette.surface).clipShape(RoundedRectangle(cornerRadius: 7))
