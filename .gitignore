@@ -3,3 +3,6 @@
 .DS_Store
 *.xcuserstate
 .codegraph/
+/windows/build/
+/windows/dist/
+/windows/.vs/

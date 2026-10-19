@@ -1,0 +1,25 @@
+name: Windows preview
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['windows/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['windows/**', '.github/workflows/windows.yml']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and check
+        shell: pwsh
+        run: ./windows/build.ps1
+      - name: Package portable preview
+        shell: pwsh
+        run: ./windows/package.ps1 -SkipBuild
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlowCat-Windows-x64-preview
+          path: windows/dist/*
