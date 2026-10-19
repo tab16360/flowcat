@@ -113,8 +113,10 @@ CI 检查核心统计并生成安装包。`main` 上的站点更新由 GitHub Pa
 
 1.5.3 已通过本机构建、签名与 128 项核心统计、磁盘持久化及更新检查。已实测本机进程采样、内置 SSD 健康字段与外置盘未提供状态，并渲染浅色、深色、窄屏和短屏原生界面。桌面自动化连接暂不可用，完整鼠标交互、权限弹窗和多显示器场景尚未验收。图示不能替代运行测试。
 
-## Windows 开发预览
+## Windows 版
 
-Windows 原生版本位于 [`windows/`](windows/README.md)，使用 C++20 / Win32 / Direct2D，提供托盘面板、进程流量与磁盘读写、NVMe 状态和本地历史。当前需管理员权限运行，尚未与 macOS 正式版功能对齐，也不使用 macOS 的自动更新渠道。构建及实机验证方法见子目录说明。
+Windows 版已迁入独立仓库：[flowcat-windows](https://github.com/tab16360/flowcat-windows)。使用 C++20 / Win32 / Direct2D，后台采集服务与普通权限托盘界面分离，提供独立安装器、Wi-Fi 筛选、设置与更新渠道。
+
+[Windows 介绍与下载](https://tab16360.github.io/flowcat/windows/)。本仓库继续维护 macOS 版。
 
 采用 [MIT 许可证](LICENSE)。
