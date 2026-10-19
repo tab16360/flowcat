@@ -85,7 +85,7 @@ open build/流量喵.app
 
 ```sh
 bash scripts/package.sh
-# 输出 dist/FlowCat-1.5.4-arm64.zip 及其 SHA-256
+# 输出 dist/FlowCat-1.5.5-arm64.zip 及其 SHA-256
 ```
 
 应用图标与菜单栏猫咪共用 `Sources/BrandIcon.swift` 中的矢量造型。修改后运行 `bash scripts/icons.sh` 重新生成应用图标及站点预览。
