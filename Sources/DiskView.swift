@@ -202,22 +202,17 @@ struct DiskView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 Text("\(index+1)").font(.system(size: 10)).foregroundStyle(palette.secondary).frame(width: 12, height: 26)
-                Button { ProcessLocation.reveal(process.path) } label: {
-                    Group {
-                        if let icon = monitor.icons[process.name] {
-                            Image(nsImage: icon).resizable().scaledToFit()
-                        } else {
-                            Image(systemName: process.path.hasSuffix(".app") ? "app.dashed" : "terminal").font(.system(size: 18)).foregroundStyle(palette.secondary)
-                        }
-                    }.frame(width: 26, height: 26)
-                }.buttonStyle(.plain).disabled(!available).help(available ? "在 Finder 中显示：" + process.path : "路径不可用：" + process.path)
-                    .accessibilityLabel("在 Finder 中显示 \(process.name)")
+                Group {
+                    if let icon = monitor.icons[process.name] {
+                        Image(nsImage: icon).resizable().scaledToFit()
+                    } else {
+                        Image(systemName: process.path.hasSuffix(".app") ? "app.dashed" : "terminal").font(.system(size: 18)).foregroundStyle(palette.secondary)
+                    }
+                }.frame(width: 26, height: 26)
                     .onAppear { monitor.loadDiskIcon(process.name, path: process.path) }
                 VStack(spacing: 5) {
                     HStack(alignment: .firstTextBaseline) {
-                        Button { ProcessLocation.reveal(process.path) } label: {
-                            Text(process.name).font(.system(size: 12, weight: .medium)).lineLimit(1).truncationMode(.middle)
-                        }.buttonStyle(.plain).disabled(!available).help(available ? "在 Finder 中显示：" + process.path : "路径不可用：" + process.path)
+                        Text(process.name).font(.system(size: 12, weight: .medium)).lineLimit(1).truncationMode(.middle)
                         Spacer(minLength: 6)
                         Text(diskVolume(value(process.bytes))).font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
                     }
@@ -245,7 +240,12 @@ struct DiskView: View {
                     Text(process.path.hasSuffix(".app") ? "应用与其辅助进程合并；覆盖所有磁盘。" : "系统进程计数；覆盖所有磁盘。")
                 }.font(.system(size: 10)).foregroundStyle(palette.secondary).padding(.leading, 46)
             }
-        }.padding(.vertical, 9)
+        }.padding(.vertical, 9).contentShape(Rectangle())
+            .contextMenu {
+                Button { ProcessLocation.reveal(process.path) } label: {
+                    Label("打开位置", systemImage: "folder")
+                }.disabled(!available)
+            }
     }
     private func emptyRecords(_ record: DiskDay) -> some View {
         VStack(spacing: 8) {

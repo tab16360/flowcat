@@ -298,12 +298,12 @@ struct LedgerView: View {
                 }
             }
         }.padding(.vertical, 10).contentShape(Rectangle())
-        return Group {
-            if let path {
-                Button { ProcessLocation.reveal(path.path) } label: { content }
-                    .buttonStyle(.plain).help("在 Finder 中显示：" + path.path)
-                    .accessibilityLabel("\(name)，在 Finder 中显示")
-            } else { content.help("未记录可用路径") }
+        return content.contextMenu {
+            Button {
+                if let path { ProcessLocation.reveal(path.path) }
+            } label: {
+                Label("打开位置", systemImage: "folder")
+            }.disabled(path == nil)
         }
     }
     @ViewBuilder private func processIcon(_ name: String) -> some View {
