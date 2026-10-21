@@ -1,45 +1,53 @@
 import AppKit
 
-// Render one template image so AppKit tints the icon and both text rows together,
-// including highlighted and dark menu bars. The status button keeps its existing actions.
+// Each enabled metric group gets one column; two rows share a compact width.
+// A single template image keeps tint and highlighting consistent with the menu bar.
 enum MenuBarSpeeds {
-    static func image(network: String?, read: String, write: String) -> NSImage {
-        let diskFont = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
-        let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
-        let diskAttributes: [NSAttributedString.Key: Any] = [.font: diskFont, .foregroundColor: NSColor.black]
-        let networkAttributes: [NSAttributedString.Key: Any] = [.font: networkFont, .foregroundColor: NSColor.black]
-        let reading = "读 " + read, writing = "写 " + write
-        let readSize = (reading as NSString).size(withAttributes: diskAttributes)
-        let writeSize = (writing as NSString).size(withAttributes: diskAttributes)
-        let diskWidth = ceil(max(readSize.width, writeSize.width))
-        let networkSize = network.map { ($0 as NSString).size(withAttributes: networkAttributes) } ?? .zero
-        let networkWidth = network == nil ? 0 : ceil(networkSize.width) + 7
-        let height: CGFloat = 22
-        let image = NSImage(size: NSSize(width: 18 + 6 + networkWidth + diskWidth, height: height))
+    static func columns(total: String?, network: String?, read: String?, write: String?) -> [[String]] {
+        var columns: [[String]] = []
+        let traffic = [total, network].compactMap { $0 }
+        if !traffic.isEmpty { columns.append(traffic) }
+        if let read, let write { columns.append(["读 " + read, "写 " + write]) }
+        return columns
+    }
+    static func image(total: String? = nil, network: String?, read: String? = nil, write: String? = nil) -> NSImage {
+        let columns = columns(total: total, network: network, read: read, write: write)
+        let small: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium), .foregroundColor: NSColor.black]
+        let normal: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: NSColor.black]
+        let widths = columns.map { rows -> CGFloat in
+            let attributes = rows.count == 2 ? small : normal
+            return ceil(rows.map { ($0 as NSString).size(withAttributes: attributes).width }.max() ?? 0)
+        }
+        let image = NSImage(size: NSSize(width: 18 + widths.reduce(0, +) + CGFloat(columns.count * 6), height: 22))
         image.lockFocus()
         BrandIcon.menuBar().draw(in: NSRect(x: 0, y: 2, width: 18, height: 18))
-        if let network {
-            (network as NSString).draw(at: NSPoint(x: 24, y: floor((height-networkSize.height)/2)), withAttributes: networkAttributes)
+        var x: CGFloat = 24
+        for (index, rows) in columns.enumerated() {
+            let attributes = rows.count == 2 ? small : normal
+            for (row, label) in rows.enumerated() {
+                let y: CGFloat = rows.count == 2 ? (row == 0 ? 11 : 0) : floor((22 - (label as NSString).size(withAttributes: attributes).height) / 2)
+                (label as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: attributes)
+            }
+            x += widths[index] + 6
         }
-        // Use two fixed half-height lanes; reserve the wider row for a stable shared column.
-        let x = 24 + networkWidth
-        (reading as NSString).draw(at: NSPoint(x: x, y: 11), withAttributes: diskAttributes)
-        (writing as NSString).draw(at: NSPoint(x: x, y: 0), withAttributes: diskAttributes)
-        image.unlockFocus()
-        image.isTemplate = true
+        image.unlockFocus(); image.isTemplate = true
         return image
     }
     static func preview() -> NSImage {
-        let image = NSImage(size: NSSize(width: 340, height: 100))
+        let examples: [(String, String?, String?, String?, String?)] = [
+            ("仅累计", "今 1.28 GB", nil, nil, nil),
+            ("仅网速", nil, "↓219.00 KB/s", nil, nil),
+            ("累计 + 网速", "今 1.28 GB", "↓219.00 KB/s", nil, nil),
+            ("累计 + 网速 + 磁盘", "今 1.28 GB", "↓219.00 KB/s", "1.28 MB/s", "640.00 KB/s"),
+            ("仅磁盘", nil, nil, "1.28 MB/s", "640.00 KB/s")]
+        let image = NSImage(size: NSSize(width: 460, height: 210))
         image.lockFocus()
-        NSColor.white.setFill(); NSRect(x: 0, y: 0, width: 340, height: 100).fill()
-        let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.darkGray]
-        for (label, network, y) in [("仅磁盘", nil as String?, CGFloat(60)), ("网速 + 磁盘", "↓219.00 KB/s", CGFloat(20))] {
-            (label as NSString).draw(at: NSPoint(x: 10, y: y+4), withAttributes: attributes)
-            let speeds = self.image(network: network, read: "1.28 MB/s", write: "640.00 KB/s")
-            speeds.draw(at: NSPoint(x: 105, y: y), from: .zero, operation: .sourceOver, fraction: 1)
+        NSColor.white.setFill(); NSRect(x: 0, y: 0, width: 460, height: 210).fill()
+        for (index, example) in examples.enumerated() {
+            let y = CGFloat(175 - index * 40)
+            (example.0 as NSString).draw(at: NSPoint(x: 10, y: y+4), withAttributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.darkGray])
+            self.image(total: example.1, network: example.2, read: example.3, write: example.4).draw(at: NSPoint(x: 155, y: y), from: .zero, operation: .sourceOver, fraction: 1)
         }
-        image.unlockFocus()
-        return image
+        image.unlockFocus(); return image
     }
 }

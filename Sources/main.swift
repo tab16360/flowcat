@@ -40,25 +40,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
     }
     private func refreshStatusItem() {
         guard let button = item.button else { return }
-        let showSpeed = monitor.showMenuBarSpeed || monitor.disk.showMenuBarDiskSpeed
         let network = "↓\(volume(UInt64(max(0, monitor.download))))/s"
         let reading = "\(diskVolume(UInt64(max(0, monitor.disk.readRate))))/s"
         let writing = "\(diskVolume(UInt64(max(0, monitor.disk.writeRate))))/s"
-        if monitor.disk.showMenuBarDiskSpeed && !monitor.paused {
-            button.title = ""
-            button.imagePosition = .imageOnly
-            button.imageScaling = .scaleNone
-            button.image = MenuBarSpeeds.image(network: monitor.showMenuBarSpeed ? network : nil, read: reading, write: writing)
-        } else {
-            button.image = BrandIcon.menuBar()
-            button.imagePosition = showSpeed ? .imageLeading : .imageOnly
-            button.title = showSpeed && monitor.paused ? " 暂停" : monitor.showMenuBarSpeed ? " " + network : ""
-        }
-        button.toolTip = "流量喵\(monitor.paused ? " · 已暂停" : "") · 今日网卡总量 \(volume(monitor.ledger.days[DateKeys.day(Date())]?.physical.total ?? 0))"
+        let today = monitor.menuBarTotal.map { volume($0.total) } ?? "—"
+        let totalLabel = monitor.showMenuBarTotal ? (monitor.includeLAN ? "今 " : "今≈ ") + today : nil
+        let speedLabel = monitor.showMenuBarSpeed ? (monitor.paused ? "暂停" : network) : nil
+        let diskVisible = monitor.disk.showMenuBarDiskSpeed && !monitor.paused
+        button.title = ""; button.imagePosition = .imageOnly; button.imageScaling = .scaleNone
+        button.image = MenuBarSpeeds.image(total: totalLabel,
+            network: speedLabel ?? (monitor.paused && monitor.disk.showMenuBarDiskSpeed && totalLabel == nil ? "暂停" : nil),
+            read: diskVisible ? reading : nil, write: diskVisible ? writing : nil)
+        button.toolTip = "流量喵\(monitor.paused ? " · 已暂停" : "") · 今日\(monitor.includeLAN ? "总流量" : "扣除局域网估算") \(today)"
         if monitor.disk.showMenuBarDiskSpeed {
             button.toolTip = (button.toolTip ?? "流量喵") + "\n磁盘读取 \(reading)，写入 \(writing)"
         }
-        button.setAccessibilityLabel(monitor.paused ? "流量喵，已暂停" : monitor.disk.showMenuBarDiskSpeed ? "流量喵，磁盘读取 \(reading)，写入 \(writing)，打开统计面板" : "流量喵，打开统计面板")
+        button.setAccessibilityLabel("流量喵，\(monitor.paused ? "已暂停，" : "")\(monitor.showMenuBarTotal ? "今日累计 " + today + "，" : "")打开统计面板")
+
     }
     @objc func toggle() {
         if let event = NSApp.currentEvent,
@@ -97,6 +95,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         menu.addItem(.separator())
         let login = add("登录时自动启动", action: #selector(toggleLogin))
         login.state = monitor.loginEnabled ? .on : .off
+        let total = add("菜单栏显示累计流量", action: #selector(toggleMenuBarTotal))
+        total.state = monitor.showMenuBarTotal ? .on : .off
         let speed = add("菜单栏显示网速", action: #selector(toggleMenuBarSpeed))
         speed.state = monitor.showMenuBarSpeed ? .on : .off
         let diskSpeed = add("菜单栏显示磁盘读写", action: #selector(toggleMenuBarDiskSpeed))
@@ -156,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
     }
     @MainActor @objc private func checkUpdates() { UpdateChecker.shared.check() }
     @objc private func toggleMenuBarDiskSpeed() { monitor.disk.showMenuBarDiskSpeed.toggle() }
+    @objc private func toggleMenuBarTotal() { monitor.showMenuBarTotal.toggle() }
     @objc private func toggleMenuBarSpeed() { monitor.showMenuBarSpeed.toggle() }
     @objc private func toggleRecording() { monitor.togglePause() }
     @objc private func exportCSV() {

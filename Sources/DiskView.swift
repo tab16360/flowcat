@@ -198,39 +198,47 @@ struct DiskView: View {
         }.frame(minHeight: 0, maxHeight: .infinity).layoutPriority(-1)
     }
     private func processRow(_ index: Int, id: String, process: DiskProcessUsage, maxValue: UInt64) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Button {
-                if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
-            } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    Text("\(index+1)").font(.system(size: 10)).foregroundStyle(palette.secondary).frame(width: 12, height: 26)
+        let available = ProcessLocation.existingURL(process.path) != nil
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                Text("\(index+1)").font(.system(size: 10)).foregroundStyle(palette.secondary).frame(width: 12, height: 26)
+                Button { ProcessLocation.reveal(process.path) } label: {
                     Group {
                         if let icon = monitor.icons[process.name] {
                             Image(nsImage: icon).resizable().scaledToFit()
                         } else {
                             Image(systemName: process.path.hasSuffix(".app") ? "app.dashed" : "terminal").font(.system(size: 18)).foregroundStyle(palette.secondary)
                         }
-                    }.frame(width: 26, height: 26).onAppear { monitor.loadDiskIcon(process.name, path: process.path) }
-                    VStack(spacing: 5) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(process.name).font(.system(size: 12, weight: .medium)).lineLimit(1).truncationMode(.middle).help(process.path)
-                            Spacer(minLength: 6)
-                            Text(diskVolume(value(process.bytes))).font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
-                        }
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(palette.track)
-                                Capsule().fill(palette.accent).frame(width: geometry.size.width*CGFloat(Double(value(process.bytes))/Double(maxValue)))
-                            }
-                        }.frame(height: 3)
-                        HStack(spacing: 4) {
-                            Text("读 \(diskVolume(process.bytes.read))  写 \(diskVolume(process.bytes.written))").font(.system(size: 10)).monospacedDigit()
-                            Spacer(minLength: 0)
-                            Image(systemName: expanded.contains(id) ? "chevron.up" : "chevron.down").font(.system(size: 8))
-                        }.foregroundStyle(palette.secondary)
+                    }.frame(width: 26, height: 26)
+                }.buttonStyle(.plain).disabled(!available).help(available ? "在 Finder 中显示：" + process.path : "路径不可用：" + process.path)
+                    .accessibilityLabel("在 Finder 中显示 \(process.name)")
+                    .onAppear { monitor.loadDiskIcon(process.name, path: process.path) }
+                VStack(spacing: 5) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Button { ProcessLocation.reveal(process.path) } label: {
+                            Text(process.name).font(.system(size: 12, weight: .medium)).lineLimit(1).truncationMode(.middle)
+                        }.buttonStyle(.plain).disabled(!available).help(available ? "在 Finder 中显示：" + process.path : "路径不可用：" + process.path)
+                        Spacer(minLength: 6)
+                        Text(diskVolume(value(process.bytes))).font(.system(size: 12, weight: .semibold)).monospacedDigit().fixedSize()
                     }
-                }.contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel("\(process.name)，读取 \(diskVolume(process.bytes.read))，写入 \(diskVolume(process.bytes.written))，\(expanded.contains(id) ? "收起" : "展开")详情")
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(palette.track)
+                            Capsule().fill(palette.accent).frame(width: geometry.size.width*CGFloat(Double(value(process.bytes))/Double(maxValue)))
+                        }
+                    }.frame(height: 3)
+                    HStack(spacing: 4) {
+                        Text("读 \(diskVolume(process.bytes.read))  写 \(diskVolume(process.bytes.written))").font(.system(size: 10)).monospacedDigit()
+                        Spacer(minLength: 0)
+                        Button {
+                            if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
+                        } label: {
+                            Image(systemName: expanded.contains(id) ? "chevron.up" : "chevron.down").font(.system(size: 9)).frame(width: 22, height: 16).contentShape(Rectangle())
+                        }.buttonStyle(.plain).help(expanded.contains(id) ? "收起详情" : "展开路径与统计详情")
+                            .accessibilityLabel("\(process.name)，\(expanded.contains(id) ? "收起" : "展开")详情")
+                    }.foregroundStyle(palette.secondary)
+                }
+            }
             if expanded.contains(id) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(process.path).textSelection(.enabled)

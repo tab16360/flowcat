@@ -114,6 +114,7 @@ struct LedgerView: View {
             }.buttonStyle(.plain).help(monitor.paused ? "继续记录" : "暂停记录")
                 .accessibilityLabel(monitor.paused ? "继续记录" : "暂停记录")
             Menu {
+                Toggle("菜单栏显示累计流量", isOn: $monitor.showMenuBarTotal)
                 Toggle("菜单栏显示网速", isOn: $monitor.showMenuBarSpeed)
                 DiskSpeedToggle(disk: monitor.disk)
                 Toggle("登录时自动启动", isOn: Binding(get: { monitor.loginEnabled }, set: { setLogin($0) }))
@@ -266,7 +267,8 @@ struct LedgerView: View {
         }.frame(minHeight: 0, maxHeight: .infinity).layoutPriority(-1)
     }
     private func processRow(index: Int, name: String, bytes: Bytes) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        let path = monitor.path(for: name)
+        let content = HStack(alignment: .top, spacing: 10) {
             Text(String(index + 1)).font(.system(size: 10, weight: .medium)).foregroundStyle(palette.secondary)
                 .frame(width: 14, height: 27).monospacedDigit().accessibilityHidden(true)
             processIcon(name).frame(width: 27, height: 27).accessibilityHidden(true)
@@ -295,7 +297,14 @@ struct LedgerView: View {
                     }
                 }
             }
-        }.padding(.vertical, 10)
+        }.padding(.vertical, 10).contentShape(Rectangle())
+        return Group {
+            if let path {
+                Button { ProcessLocation.reveal(path.path) } label: { content }
+                    .buttonStyle(.plain).help("在 Finder 中显示：" + path.path)
+                    .accessibilityLabel("\(name)，在 Finder 中显示")
+            } else { content.help("未记录可用路径") }
+        }
     }
     @ViewBuilder private func processIcon(_ name: String) -> some View {
         if isRelay(name) {

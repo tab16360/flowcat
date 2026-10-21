@@ -37,16 +37,18 @@ struct NetworkHistory: Codable {
     var days: [String: DayRecord] = [:]
 }
 struct Ledger: Codable {
-    var version = 5
+    var version = 6
+    var processPaths: [String: String] = [:]
     var firstStarted: Date
     var days: [String: DayRecord] = [:]
     var networks: [String: NetworkHistory] = [:]
     init(firstStarted: Date = Date()) { self.firstStarted = firstStarted }
-    enum CodingKeys: String, CodingKey { case version, firstStarted, days, networks }
+    enum CodingKeys: String, CodingKey { case version, firstStarted, days, networks, processPaths }
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         firstStarted = try container.decode(Date.self, forKey: .firstStarted)
         days = try container.decode([String: DayRecord].self, forKey: .days)
+        processPaths = try container.decodeIfPresent([String: String].self, forKey: .processPaths) ?? [:]
         networks = try container.decodeIfPresent([String: NetworkHistory].self, forKey: .networks) ?? [:]
         networks = networks.filter { $0.key.hasPrefix("wifi:") }
         for key in networks.keys {

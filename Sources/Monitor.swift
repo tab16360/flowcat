@@ -35,10 +35,17 @@ final class TrafficMonitor: ObservableObject {
     @Published var upload: Double = 0
     @Published var period = 0
     @Published var includeLAN = UserDefaults.standard.object(forKey: "includeLAN") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(includeLAN, forKey: "includeLAN") }
+        didSet { UserDefaults.standard.set(includeLAN, forKey: "includeLAN"); onUpdate?() }
     }
     @Published var showMenuBarSpeed = UserDefaults.standard.object(forKey: "showMenuBarSpeed") as? Bool ?? true {
         didSet { UserDefaults.standard.set(showMenuBarSpeed, forKey: "showMenuBarSpeed"); onUpdate?() }
+    }
+    @Published var showMenuBarTotal = UserDefaults.standard.bool(forKey: "showMenuBarTotal") {
+        didSet { UserDefaults.standard.set(showMenuBarTotal, forKey: "showMenuBarTotal"); onUpdate?() }
+    }
+    var menuBarTotal: Bytes? {
+        let today = ledger.days[DateKeys.day(Date())]
+        return includeLAN ? today?.physical ?? Bytes() : today?.withoutLAN?.bytes
     }
     @Published var selectedNetwork = "__all__"
     @Published var currentNetwork = NetworkContext(key: "__all__", name: "全部网络", identified: false)
@@ -95,12 +102,22 @@ final class TrafficMonitor: ObservableObject {
         if enabled { try SMAppService.mainApp.register() }
         else { try SMAppService.mainApp.unregister() }
     }
+    func path(for name: String) -> URL? {
+        let known = ledger.processPaths[name] ?? appPaths[name]
+        if let known, let url = ProcessLocation.existingURL(known) { return url }
+        guard !name.contains("/") else { return nil }
+        for directory in ["/Applications", NSHomeDirectory() + "/Applications", "/System/Applications", "/System/Applications/Utilities"] {
+            if let url = ProcessLocation.existingURL(directory + "/" + name + ".app") { return url }
+        }
+        return nil
+    }
+    func reveal(_ name: String) { if let url = path(for: name) { ProcessLocation.reveal(url.path) } }
     func clearIcons() { icons.removeAll(); iconOrder.removeAll() }
     func loadDiskIcon(_ name: String, path: String) {
         if path.hasSuffix(".app") { appPaths[name] = path; loadIcon(name) }
     }
     func loadIcon(_ name: String) {
-        guard icons[name] == nil, let path = appPaths[name] else { return }
+        guard icons[name] == nil, let path = path(for: name)?.path else { return }
         let thumbnail: NSImage? = autoreleasepool {
             guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 64, pixelsHigh: 64,
                 bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
@@ -178,7 +195,12 @@ final class TrafficMonitor: ObservableObject {
         }
         let connections = ConnectionTraffic.parse(proc.text, localSubnets: LocalSubnet.parse(addresses))
         let mapping = processNames(names)
-        for (_, item) in mapping where item.1.hasSuffix(".app") { appPaths[item.0] = item.1 }
+        var recordedPaths = ledger.processPaths
+        for (_, item) in mapping where item.1.hasPrefix("/") {
+            appPaths[item.0] = item.1
+            recordedPaths[item.0] = item.1
+        }
+        if recordedPaths != ledger.processPaths { ledger.processPaths = recordedPaths }
         if let previous = oldTime {
             let interval = now.timeIntervalSince(previous)
             // Do not attribute sleep, pause or missed samples as observed history.
