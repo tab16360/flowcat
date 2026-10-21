@@ -94,9 +94,11 @@ struct DiskLedger: Codable {
     }
 }
 struct DiskAccumulator {
+    private(set) var lastChanges: [String: DiskProcessUsage] = [:]
     private var previous: DiskSnapshot?
-    mutating func reset() { previous = nil }
+    mutating func reset() { previous = nil; lastChanges = [:] }
     mutating func apply(_ sample: DiskSnapshot, ledger: inout DiskLedger) -> DiskBytes? {
+        lastChanges = [:]
         guard sample.valid else { reset(); return nil }
         defer { previous = sample }
         guard let old = previous else { return nil }
@@ -106,10 +108,10 @@ struct DiskAccumulator {
         for (key, counter) in sample.counters {
             guard let before = old.counters[key], before.group == counter.group else { continue }
             let delta = counter.usage.bytes.delta(before.usage.bytes)
-            guard delta.total > 0 else { continue }
             var item = changes[counter.group] ?? DiskProcessUsage(name: counter.usage.name, path: counter.usage.path)
             item.bytes.add(delta); changes[counter.group] = item; total.add(delta)
         }
+        lastChanges = changes
         ledger.add(from: old.date, to: sample.date, processes: changes)
         return total
     }

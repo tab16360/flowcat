@@ -119,6 +119,7 @@ struct LedgerView: View {
                 DiskSpeedToggle(disk: monitor.disk)
                 Toggle("登录时自动启动", isOn: Binding(get: { monitor.loginEnabled }, set: { setLogin($0) }))
                 Button("导出 CSV…") { if monitor.diskTab { monitor.disk.export() } else { monitor.export() } }
+                Button("磁盘写入提醒…") { DiskAlertWindow.shared.show(monitor.disk) }
                 Button("检查更新…") { UpdateChecker.shared.check() }
                 Divider()
                 Button("退出流量喵") { monitor.save(); NSApp.terminate(nil) }

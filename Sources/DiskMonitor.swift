@@ -138,6 +138,8 @@ final class DiskMonitor: ObservableObject {
     var isPreview = false
     var onUpdate: (() -> Void)?
     let file: URL
+    let alerts: DiskAlertController
+    private var dirty = false
     private let queue = DispatchQueue(label: "local.flowcat.disk-sampling", qos: .utility)
     private let healthQueue = DispatchQueue(label: "local.flowcat.disk-health", qos: .utility)
     private var accumulator = DiskAccumulator()
@@ -147,6 +149,7 @@ final class DiskMonitor: ObservableObject {
     private var lastSaved = Date.distantPast, lastHealth = Date.distantPast
     init(file: URL) {
         self.file = file
+        self.alerts = DiskAlertController(file: file.deletingLastPathComponent().appendingPathComponent("disk-alerts.json"))
         if FileManager.default.fileExists(atPath: file.path) {
             do {
                 let value = try JSONDecoder().decode(DiskLedger.self, from: Data(contentsOf: file))
@@ -162,7 +165,7 @@ final class DiskMonitor: ObservableObject {
     var selected: DiskDay { ledger.sum(keys) }
     var device: DiskDevice? { devices.first { $0.id == selectedDevice } ?? devices.first }
     var historyStart: Date { min(Date(), ledger.firstStarted) }
-    func reset() { generation += 1; accumulator.reset(); previousTime = nil; readRate = 0; writeRate = 0; onUpdate?() }
+    func reset() { alerts.resetContinuity(); generation += 1; accumulator.reset(); previousTime = nil; readRate = 0; writeRate = 0; onUpdate?() }
     func setPaused(_ value: Bool) { paused = value; reset() }
     func sample() {
         guard !isPreview, !paused, !inFlight else { return }
@@ -175,6 +178,11 @@ final class DiskMonitor: ObservableObject {
                 let old = self.previousTime
                 let change = self.accumulator.apply(snapshot, ledger: &self.ledger)
                 self.previousTime = snapshot.valid ? snapshot.date : nil
+                if let old, change != nil {
+                    self.dirty = true
+                    self.alerts.ingest(from: old, to: snapshot.date, processes: self.accumulator.lastChanges,
+                                      daily: self.ledger.days[DateKeys.day(snapshot.date)]?.processes ?? [:])
+                } else { self.alerts.resetContinuity() }
                 self.readRate = 0; self.writeRate = 0
                 if let change, let old {
                     let interval = snapshot.date.timeIntervalSince(old)
@@ -183,7 +191,7 @@ final class DiskMonitor: ObservableObject {
                 self.denied = snapshot.denied; self.sampledProcesses = snapshot.counters.count
                 self.samplingError = snapshot.valid ? "" : "暂时无法采集磁盘读写，请重试。"
                 if snapshot.valid { self.lastSample = snapshot.date }
-                if snapshot.date.timeIntervalSince(self.lastSaved) >= 60 { self.save(); self.lastSaved = snapshot.date }
+                if snapshot.date.timeIntervalSince(self.lastSaved) >= 60 { self.save() }
                 self.onUpdate?()
             }
         }
@@ -206,11 +214,11 @@ final class DiskMonitor: ObservableObject {
         }
     }
     func save() {
-        guard writable else { return }
+        guard writable, dirty else { return }
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-            try encoder.encode(ledger).write(to: file, options: .atomic); storageError = ""
+            try encoder.encode(ledger).write(to: file, options: .atomic); storageError = ""; dirty = false; lastSaved = Date()
         } catch { storageError = "磁盘统计保存失败：\(error.localizedDescription)" }
     }
     func export() {

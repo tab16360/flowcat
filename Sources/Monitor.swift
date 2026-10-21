@@ -69,6 +69,7 @@ final class TrafficMonitor: ObservableObject {
     let file: URL
     private var brokenStore: URL?
     private var storeWritable = true
+    private var dirty = false
     init(file: URL? = nil) {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("流量账本", isDirectory: true) // Keep the existing history directory across the rename.
@@ -200,7 +201,7 @@ final class TrafficMonitor: ObservableObject {
             appPaths[item.0] = item.1
             recordedPaths[item.0] = item.1
         }
-        if recordedPaths != ledger.processPaths { ledger.processPaths = recordedPaths }
+        if recordedPaths != ledger.processPaths { ledger.processPaths = recordedPaths; dirty = true }
         if let previous = oldTime {
             let interval = now.timeIntervalSince(previous)
             // Do not attribute sleep, pause or missed samples as observed history.
@@ -228,6 +229,7 @@ final class TrafficMonitor: ObservableObject {
                 let breakdown = ConnectionTraffic.delta(current: connections, previous: oldConnections,
                     seconds: interval, names: mapping.mapValues { $0.0 })
                 ledger.add(day: DateKeys.day(now), physical: physical, processes: deltas, seconds: interval, network: bucket, breakdown: breakdown)
+                dirty = true
                 download = Double(physical.received) / interval
                 upload = Double(physical.sent) / interval
                 if now.timeIntervalSince(lastSaved) >= 60 { save(); lastSaved = now }
@@ -241,10 +243,12 @@ final class TrafficMonitor: ObservableObject {
     func save() {
         disk.save()
         guard storeWritable else { status = "旧历史无法读取且备份失败，已停止写入以保留原件"; return }
+        guard dirty else { return }
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             try encoder.encode(ledger).write(to: file, options: .atomic)
+            dirty = false
         } catch { status = "统计保存失败：\(error.localizedDescription)" }
     }
     func export() {

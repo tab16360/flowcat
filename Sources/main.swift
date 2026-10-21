@@ -34,6 +34,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
             self.refreshStatusItem()
         }
         monitor.disk.onUpdate = { [weak self] in self?.refreshStatusItem() }
+        monitor.disk.alerts.onOpen = { [weak self] in
+            guard let self else { return }
+            self.popover.performClose(nil); DiskAlertWindow.shared.show(self.monitor.disk)
+        }
+        monitor.disk.alerts.configureNotifications()
         refreshStatusItem()
         started = true; monitor.start()
         UpdateInstaller.acknowledgeLaunch()
@@ -102,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         let diskSpeed = add("菜单栏显示磁盘读写", action: #selector(toggleMenuBarDiskSpeed))
         diskSpeed.state = monitor.disk.showMenuBarDiskSpeed ? .on : .off
         _ = add("导出 CSV…", action: #selector(exportCSV))
+        _ = add("磁盘写入提醒…", action: #selector(openDiskAlerts))
         _ = add("检查更新…", action: #selector(checkUpdates))
         menu.addItem(.separator())
         _ = add("退出流量喵", action: #selector(quit))
@@ -155,6 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         menuObservers.removeAll(); menuDepth = 0
     }
     @MainActor @objc private func checkUpdates() { UpdateChecker.shared.check() }
+    @objc private func openDiskAlerts() { popover.performClose(nil); DiskAlertWindow.shared.show(monitor.disk) }
     @objc private func toggleMenuBarDiskSpeed() { monitor.disk.showMenuBarDiskSpeed.toggle() }
     @objc private func toggleMenuBarTotal() { monitor.showMenuBarTotal.toggle() }
     @objc private func toggleMenuBarSpeed() { monitor.showMenuBarSpeed.toggle() }
@@ -288,8 +295,32 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
     preview.download = 219000; preview.upload = 2400
     preview.status = "界面预览 · 示例数据"
     if CommandLine.arguments.contains("--dark") { app.appearance = NSAppearance(named: .darkAqua) }
-    let size = CGSize(width: CommandLine.arguments.contains("--narrow") ? 342 : 460, height: CommandLine.arguments.contains("--short") ? 452 : 640)
-    let view = NSHostingView(rootView: LedgerView(monitor: preview, panelSize: size))
+    let alertPreview = CommandLine.arguments.contains("--alerts")
+    let size = alertPreview ? CGSize(width: CommandLine.arguments.contains("--narrow") ? 510 : 620, height: 900) : CGSize(width: CommandLine.arguments.contains("--narrow") ? 342 : 460, height: CommandLine.arguments.contains("--short") ? 452 : 640)
+    var alertModel = preview.disk.alerts
+    if alertPreview {
+        let suite = "flowcat-alert-preview-" + UUID().uuidString
+        let previewDefaults = UserDefaults(suiteName: suite)!
+        let alertFile = destination.deletingLastPathComponent().appendingPathComponent("preview-alerts-unused.json")
+        let path = "/Applications/Google Chrome.app"
+        if CommandLine.arguments.contains("--alert-detail") {
+            let example = DiskWriteAlert(date: Date(), path: path, name: "Google Chrome", kind: .hourly, bytes: 2_120_000_000, seconds: 2700)
+            try JSONEncoder().encode(DiskAlertMemory(recent: [example])).write(to: alertFile)
+        } else { try? FileManager.default.removeItem(at: alertFile) }
+        alertModel = DiskAlertController(file: alertFile, defaults: previewDefaults)
+        alertModel.preferences.enabled = true
+        if CommandLine.arguments.contains("--alert-detail") {
+            alertModel.selectedPath = path
+            let now = Date()
+            for i in 0..<180 {
+                let bytes = UInt64((i * 19 + 7) % 80) * 100_000
+                alertModel.ingest(from: now.addingTimeInterval(Double(i - 180) * 10), to: now.addingTimeInterval(Double(i - 179) * 10),
+                    processes: [path: DiskProcessUsage(name: "Google Chrome", path: path, bytes: DiskBytes(written: bytes))], daily: [:])
+            }
+        }
+        UserDefaults.standard.removePersistentDomain(forName: suite)
+    }
+    let view = NSHostingView(rootView: alertPreview ? AnyView(DiskAlertView(disk: preview.disk, alerts: alertModel)) : AnyView(LedgerView(monitor: preview, panelSize: size)))
     view.frame = NSRect(origin: .zero, size: size)
     let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
     window.contentView = view

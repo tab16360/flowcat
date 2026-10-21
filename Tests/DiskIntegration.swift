@@ -22,6 +22,10 @@ import Foundation
         monitor.sample(); wait { (monitor.lastSample ?? .distantPast) > firstTime }
         check(monitor.ledger.sum(Array(monitor.ledger.days.keys)).seconds > 0, "second real sample records observed coverage")
         monitor.save()
+        let savedDate = try FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as! Date
+        monitor.save()
+        let duplicateDate = try FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as! Date
+        check(duplicateDate == savedDate, "duplicate save without new sample never rewrites disk history")
         let restored = DiskMonitor(file: file)
         check(restored.ledger.days.count == monitor.ledger.days.count && restored.storageError.isEmpty, "real disk history is persisted and restored")
         let baselineBytes = restored.ledger.sum(Array(restored.ledger.days.keys)).bytes
@@ -42,6 +46,6 @@ import Foundation
         let futurePreserved = try Data(contentsOf: futureFile)
         check(futurePreserved == futureData && !newer.storageError.isEmpty, "future-version disk history cannot be overwritten by older code")
         check(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("ledger.json").path), "disk persistence never creates or rewrites network history")
-        print("All 9 disk integration checks passed.")
+        print("All 10 disk integration checks passed.")
     }
 }

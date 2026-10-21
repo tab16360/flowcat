@@ -37,6 +37,10 @@ struct DiskView: View {
         VStack(spacing: 10) {
             if disk.healthView { health }
             else { statistics }
+            HStack {
+                DiskAlertEntry(alerts: disk.alerts) { DiskAlertWindow.shared.show(disk) }
+                Spacer(minLength: 0)
+            }
             footer
         }.frame(minHeight: 0, maxHeight: .infinity)
             .onAppear { disk.sample(); if disk.healthView { disk.refreshHealth() } }
@@ -245,6 +249,11 @@ struct DiskView: View {
                 Button { ProcessLocation.reveal(process.path) } label: {
                     Label("打开位置", systemImage: "folder")
                 }.disabled(!available)
+                Divider()
+                Button {
+                    disk.alerts.selectedPath = process.path
+                    DiskAlertWindow.shared.show(disk)
+                } label: { Label("写入提醒设置…", systemImage: "bell") }
             }
     }
     private func emptyRecords(_ record: DiskDay) -> some View {
@@ -402,5 +411,16 @@ struct DiskView: View {
                 }.frame(height: 92).padding(8).background(palette.surface).clipShape(RoundedRectangle(cornerRadius: 7))
             }
         }
+    }
+}
+
+struct DiskAlertEntry: View {
+    @ObservedObject var alerts: DiskAlertController
+    var open: () -> Void
+    var body: some View {
+        Button(action: open) {
+            Label(alerts.preferences.enabled ? "写入提醒 · \(alerts.memory.recent.count) 条记录" : "设置写入提醒", systemImage: "bell")
+                .font(.system(size: 11))
+        }.buttonStyle(.plain).help("持续写入、小时预算和每日预算提醒")
     }
 }
