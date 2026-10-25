@@ -8,6 +8,8 @@
 
 [下载最新版](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [介绍站点](https://tab16360.github.io/flowcat/) · [使用说明](docs/guide.md) · [更新记录](CHANGELOG.md)
 
+关注作者 [@ai_funs](https://x.com/ai_funs)，获取流量喵更新与 AI 工具实践。
+
 ![流量喵界面示意：累计流量、Wi-Fi 筛选与进程排行](docs/assets/product.svg)
 
 *上图为界面示意，使用示例数据，并非实际采集截图。*
