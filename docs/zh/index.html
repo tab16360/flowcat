@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>流量喵 FlowCat - Mac 网络与磁盘监控</title>
+<meta name="description" content="流量喵 FlowCat：原生 macOS 菜单栏监控工具。实时网速、进程磁盘读写排行、SMART 健康与温度，看清 AI 编程工具的写盘磨损。不足 1 MB，无需账号，数据全在本地。">
+<meta property="og:title" content="流量喵 FlowCat - Mac 网络与磁盘监控">
+<meta property="og:description" content="实时网速、进程磁盘读写与 SMART 健康，都在菜单栏。不足 1 MB，无需账号，数据全在本地。">
+<meta property="og:image" content="https://tab16360.github.io/flowcat/assets/screens/hero-zh.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161d" media="(prefers-color-scheme: dark)">
+<link rel="alternate" hreflang="en" href="https://tab16360.github.io/flowcat/">
+<link rel="alternate" hreflang="zh-Hans" href="https://tab16360.github.io/flowcat/zh/">
+<link rel="icon" href="../assets/cat.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="../assets/screens/hero-zh.jpg">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="../assets/app-icon.png" alt="" width="30" height="30">流量喵</a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#features">功能</a>
+      <a href="#install">安装</a>
+      <a href="#sponsor">赞助</a>
+      <a href="https://github.com/tab16360/flowcat">GitHub</a>
+      <a class="lang" href="../" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap hero">
+    <div>
+      <h1>菜单栏里的 Mac 网络与磁盘监控。</h1>
+      <p>实时网速、进程磁盘读写与 SMART 健康。看清哪些 AI 编程工具在磨损你的 SSD。</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip">下载 Mac 版</a>
+        <a class="button secondary" href="https://github.com/tab16360/flowcat">查看 GitHub</a>
+      </div>
+    </div>
+    <figure class="hero-shot">
+      <img src="../assets/screens/hero-zh.jpg" width="2400" height="1640" alt="流量喵在 macOS 菜单栏显示今日流量、网速与磁盘读写速度，下方是网络面板与磁盘读写面板，按写入量排出 Claude Code、Cursor 与 Codex">
+    </figure>
+  </div>
+
+  <div class="wrap facts" aria-label="要点">
+    <div><strong>不足 1 MB</strong><span>原生 Swift 应用，无需运行环境</span></div>
+    <div><strong>无需账号</strong><span>不用注册任何东西</span></div>
+    <div><strong>数据在本地</strong><span>历史不会离开你的 Mac</span></div>
+    <div><strong>免费开源</strong><span>Apache 2.0 许可，托管在 GitHub</span></div>
+  </div>
+
+  <section class="compare">
+    <div class="wrap reveal">
+      <span class="label">为 AI 辅助编程而做</span>
+      <h2>AI 工具写入磁盘的量，远超它下载的。</h2>
+      <p class="lead">Agent 整天重建索引、缓存和 node_modules。流量喵把每个进程的网络流量和磁盘写入并排排行。</p>
+      <figure>
+        <img src="../assets/screens/compare-zh.jpg" width="2080" height="1440" loading="lazy" alt="左侧网络排行中 Claude Code 传输 508 MB，右侧磁盘读写排行中 Claude Code 写入 18.4 GB、Cursor 9.61 GB、Codex 7.24 GB">
+        <figcaption>示例数据，实际数值取决于你的工具与工作负载。</figcaption>
+      </figure>
+      <div class="points">
+        <div><h3>找出持续写盘的进程</h3><p>Codex、Claude Code、Cursor、构建工具与 Spotlight 都会按应用列出读写总量，辅助进程自动合并。</p></div>
+        <div><h3>对照磁盘自己的数据</h3><p>把进程写入与 SSD 自身报告的累计主机写入、温度和额定耐久度已用放在一起看。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2 class="reveal">点一下菜单栏，答案都在这里。</h2>
+      <p class="lead reveal">三个标签，不用管理窗口。打开面板，看完就关。</p>
+      <div class="bento">
+        <article class="cell wide reveal">
+          <h3>进程磁盘读写</h3>
+          <p>今日、7 天、30 天、累计或任意一天。按写入、读取或总读写排序，可搜索，点击一行查看路径。</p>
+          <div class="crop"><img src="../assets/screens/disk-zh.png" width="920" height="1280" loading="lazy" alt="磁盘读写面板，显示今日进程写入与每小时写入柱状图"></div>
+        </article>
+        <article class="cell narrow tint reveal">
+          <h3>菜单栏实时显示</h3>
+          <p>今日累计、网速与磁盘读写速度可分别开关。</p>
+          <div class="menubar"><img src="../assets/screens/status-item-zh.png" width="310" height="44" alt="菜单栏显示今日 2.21 GB、下载 1.24 MB/s、磁盘读 18.6 MB/s、写 42.3 MB/s"></div>
+        </article>
+        <article class="cell third reveal">
+          <h3>SMART 健康</h3>
+          <p>状态、温度、累计主机写入、额定耐久度已用、通电时间与介质错误。原生读取，无需 smartctl。</p>
+          <img class="shot" src="../assets/screens/health-zh.png" width="920" height="1280" loading="lazy" alt="磁盘健康面板：运行正常，38 摄氏度，累计主机写入 8.42 TB，耐久度已用 3%">
+        </article>
+        <article class="cell third reveal">
+          <h3>写入提醒</h3>
+          <p>持续高写入、单应用小时或每日预算超额时提醒你。任意应用可暂停或不再提醒。</p>
+          <img class="shot" src="../assets/screens/alerts-zh.png" width="1240" height="1800" loading="lazy" alt="磁盘写入提醒窗口：默认规则、单应用设置与每分钟写入曲线">
+        </article>
+        <article class="cell third tint reveal">
+          <h3>按应用和 Wi-Fi 看网络</h3>
+          <p>今日、昨日、7 天或本月，按真实 Wi-Fi 名称筛选。代理与 VPN 单独列出，避免重复计算。</p>
+          <img class="shot" src="../assets/screens/network-zh.png" width="920" height="1280" loading="lazy" alt="网络面板：今日累计、每小时流量柱状图与应用排行">
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap split">
+      <div class="reveal">
+        <h2>看得懂的历史记录。</h2>
+        <p class="lead">每 10 秒采样、每分钟保存，回头查看，不用猜。</p>
+        <ul class="checks">
+          <li><strong>趋势有意义。</strong>按小时和按天的柱状图；灰色表示未在记录，绝不当作 0。</li>
+          <li><strong>逐日翻看。</strong>箭头和日历可跳到开始记录以来的任意一天。</li>
+          <li><strong>导出 CSV。</strong>网络与磁盘历史，直接放进表格。</li>
+          <li><strong>数字说清口径。</strong>可扣除局域网流量，并明确标注为估算。</li>
+        </ul>
+      </div>
+      <figure class="reveal">
+        <img src="../assets/screens/disk-7d-zh.png" width="920" height="1280" loading="lazy" alt="近 7 天磁盘读写，每日写入柱状图，Claude Code 排在首位">
+      </figure>
+    </div>
+  </section>
+
+  <section class="tour">
+    <div class="wrap reveal">
+      <h2>快速看一遍。</h2>
+      <p class="lead">网络、磁盘读写、近 7 天趋势与磁盘健康，和面板里看到的一样。</p>
+      <img src="../assets/screens/demo-zh.gif" width="460" height="640" loading="lazy" alt="动图依次展示网络、磁盘读写、近 7 天趋势与磁盘健康面板">
+    </div>
+  </section>
+
+  <section id="install" class="install">
+    <div class="wrap reveal">
+      <h2>一分钟开始使用。</h2>
+      <p class="lead">需要 Apple Silicon 与 macOS 13 或更高版本。</p>
+      <ol>
+        <li><h3>下载</h3><p>从 GitHub Releases 获取最新 ZIP，不足 1 MB。</p></li>
+        <li><h3>拖入应用程序</h3><p>解压后把流量喵拖进“应用程序”文件夹。</p></li>
+        <li><h3>点一下猫咪</h3><p>打开流量喵，点击菜单栏图标。前 10 秒用于建立统计基线。</p></li>
+      </ol>
+      <a class="button" href="https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip">下载 Mac 版</a>
+      <p class="note">当前为临时签名、尚未公证。若 macOS 阻止首次打开，可在“系统设置 › 隐私与安全性”中允许，无需关闭系统安全功能。</p>
+    </div>
+  </section>
+
+  <section class="faq-section">
+    <div class="wrap faq reveal">
+      <h2>常见问题</h2>
+      <details><summary>会上传我的数据吗？</summary><p>不会。历史保存在本机的 ledger.json 与 disk-ledger.json 中，无需账号，没有遥测，不记录通信内容。只有你手动检查更新时才会访问 GitHub。</p></details>
+      <details><summary>会拖慢我的 Mac 吗？</summary><p>每 10 秒采样一次，每分钟保存一次，只在打开面板时加载界面。SMART 信息按需读取，之后约每 10 分钟刷新。</p></details>
+      <details><summary>磁盘读写数字等于 SSD 磨损吗？</summary><p>不完全等于。进程写入来自 macOS 计数器，不是 SSD 闪存的物理写入。用它找出写入最多的应用，用健康页查看磁盘自身报告的数据。</p></details>
+      <details><summary>能用于精确计费吗？</summary><p>不能。总量来自物理网卡，包含局域网与协议开销；短暂进程和网络切换可能漏计，适合作为参考，不能替代运营商账单。</p></details>
+      <details><summary>升级会丢历史吗？</summary><p>不会。选择“检查更新”，再点“安装并重启”。流量喵会下载并校验安装包、替换自身，保留历史和设置；失败时自动恢复旧版。</p></details>
+      <details><summary>支持英文吗？有 Windows 版吗？</summary><p>都有。在设置中可把语言切换为 English。另有独立仓库的 <a href="../windows/">Windows 版</a>。</p></details>
+    </div>
+  </section>
+
+  <section id="sponsor" class="sponsor">
+    <div class="wrap reveal">
+      <div class="box">
+        <div>
+          <h2>让流量喵保持免费。</h2>
+          <p>流量喵免费、开源，利用业余时间开发。如果它帮你揪出过失控的进程，欢迎赞助支持后续更新。</p>
+        </div>
+        <a class="button" href="https://github.com/sponsors/tab16360">在 GitHub 赞助</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="./"><img src="../assets/cat.svg" alt="" width="26" height="26">流量喵</a>
+    <a href="https://github.com/tab16360/flowcat">GitHub</a>
+    <a href="https://github.com/tab16360/flowcat/blob/main/CHANGELOG.md">更新记录</a>
+    <a href="../windows/">Windows 版</a>
+    <a href="https://x.com/ai_funs" target="_blank" rel="noopener noreferrer">关注作者 @ai_funs</a>
+    <a href="../" hreflang="en" lang="en">English</a>
+  </div>
+</footer>
+</body>
+</html>

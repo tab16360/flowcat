@@ -29,8 +29,11 @@ func command(_ path: String, _ arguments: [String]) -> CommandResult {
 final class TrafficMonitor: ObservableObject {
     let disk: DiskMonitor
     @Published var diskTab = false
+    @Published var searchFocusRequest = 0
     @Published var ledger: Ledger
-    @Published var status = "正在开始采集…"
+    @Published var status = tr("Starting…", "正在开始采集…")
+    // Drives the error banner; status text is localized and must not be parsed.
+    @Published var statusIsError = false
     @Published var download: Double = 0
     @Published var upload: Double = 0
     @Published var period = 0
@@ -84,7 +87,7 @@ final class TrafficMonitor: ObservableObject {
                     do { try FileManager.default.moveItem(at: self.file, to: backup) }
                     catch { storeWritable = false }
                 }
-                status = "历史文件无法读取，原件未删除"
+                status = tr("History could not be read; the original file was kept", "历史文件无法读取，原件未删除"); statusIsError = true
             }
         } else { self.ledger = Ledger() }
     }
@@ -148,7 +151,7 @@ final class TrafficMonitor: ObservableObject {
     func togglePause() {
         paused.toggle(); oldTime = nil; disk.setPaused(paused)
         download = 0; upload = 0
-        status = paused ? "已暂停统计" : "正在恢复采集…"
+        status = paused ? tr("Paused", "已暂停统计") : tr("Resuming…", "正在恢复采集…"); statusIsError = false
         if !paused { sample() }
         onUpdate?()
     }
@@ -191,7 +194,7 @@ final class TrafficMonitor: ObservableObject {
         guard !paused else { oldTime = nil; return }
         let processes = Parsers.processes(proc.text), interfaces = Parsers.interfaces(net.text)
         guard proc.success, !processes.isEmpty, net.success, !interfaces.isEmpty else {
-            status = "采集不可用：请从 Finder 启动，勿在受限沙箱中运行"
+            status = tr("Sampling unavailable: launch from Finder, not inside a restricted sandbox", "采集不可用：请从 Finder 启动，勿在受限沙箱中运行"); statusIsError = true
             download = 0; upload = 0; oldTime = nil; onUpdate?(); return
         }
         let connections = ConnectionTraffic.parse(proc.text, localSubnets: LocalSubnet.parse(addresses))
@@ -228,7 +231,7 @@ final class TrafficMonitor: ObservableObject {
                     ? NetworkContext(key: "__all__", name: "全部网络", identified: false) : network
                 let breakdown = ConnectionTraffic.delta(current: connections, previous: oldConnections,
                     seconds: interval, names: mapping.mapValues { $0.0 })
-                ledger.add(day: DateKeys.day(now), physical: physical, processes: deltas, seconds: interval, network: bucket, breakdown: breakdown)
+                ledger.add(day: DateKeys.day(now), physical: physical, processes: deltas, seconds: interval, network: bucket, breakdown: breakdown, hour: DateKeys.hour(now))
                 dirty = true
                 download = Double(physical.received) / interval
                 upload = Double(physical.sent) / interval
@@ -237,32 +240,33 @@ final class TrafficMonitor: ObservableObject {
         }
         oldConnections = connections
         oldProcesses = processes; oldInterfaces = interfaces; oldTime = now; oldNetwork = network; lastSample = now
-        status = brokenStore == nil ? "采集中 · 每 10 秒更新" : "采集中 · 旧历史损坏文件已保留"
+        status = brokenStore == nil ? tr("Recording · updates every 10 s", "采集中 · 每 10 秒更新") : tr("Recording · the unreadable old history was kept", "采集中 · 旧历史损坏文件已保留"); statusIsError = false
         onUpdate?()
     }
     func save() {
         disk.save()
-        guard storeWritable else { status = "旧历史无法读取且备份失败，已停止写入以保留原件"; return }
+        guard storeWritable else { status = tr("Old history is unreadable and could not be backed up; writing stopped to keep the original", "旧历史无法读取且备份失败，已停止写入以保留原件"); statusIsError = true; return }
         guard dirty else { return }
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             try encoder.encode(ledger).write(to: file, options: .atomic)
             dirty = false
-        } catch { status = "统计保存失败：\(error.localizedDescription)" }
+        } catch { status = tr("Could not save history: ", "统计保存失败：") + error.localizedDescription; statusIsError = true }
     }
     func export() {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "流量喵-\(DateKeys.day(Date())).csv"
+        let panel = NSSavePanel(); panel.nameFieldStringValue = tr("FlowCat-network-", "流量喵-") + "\(DateKeys.day(Date())).csv"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        var content = "日期,网络,分类,下载字节,上传字节,监控秒数\n"
+        let all = tr("All networks", "全部网络"), interface = tr("Physical interfaces", "整机网卡")
+        var content = tr("Date,Network,Category,Bytes downloaded,Bytes uploaded,Monitored seconds\n", "日期,网络,分类,下载字节,上传字节,监控秒数\n")
         for key in ledger.days.keys.sorted() {
             let d = ledger.days[key]!
-            content += "\(key),全部网络,整机网卡,\(d.physical.received),\(d.physical.sent),\(Int(d.monitoredSeconds))\n"
+            content += "\(key),\(all),\(interface),\(d.physical.received),\(d.physical.sent),\(Int(d.monitoredSeconds))\n"
             for (name, b) in d.processes.sorted(by: { $0.key < $1.key }) {
                 let escaped = name.replacingOccurrences(of: "\"", with: "\"\"")
                 // Prevent spreadsheet formula interpretation of executable names.
                 let safe = ["=", "+", "-", "@"].contains(String(escaped.prefix(1))) ? "'" + escaped : escaped
-                content += "\(key),全部网络,\"\(safe)\",\(b.received),\(b.sent),\n"
+                content += "\(key),\(all),\"\(safe)\",\(b.received),\(b.sent),\n"
             }
         }
         func csvField(_ value: String) -> String {
@@ -273,7 +277,7 @@ final class TrafficMonitor: ObservableObject {
         for history in ledger.networks.values.sorted(by: { $0.name < $1.name }) {
             for key in history.days.keys.sorted() {
                 let d = history.days[key]!
-                content += "\(key),\(csvField(history.name)),整机网卡,\(d.physical.received),\(d.physical.sent),\(Int(d.monitoredSeconds))\n"
+                content += "\(key),\(csvField(history.name)),\(interface),\(d.physical.received),\(d.physical.sent),\(Int(d.monitoredSeconds))\n"
                 for (name, b) in d.processes.sorted(by: { $0.key < $1.key }) {
                     content += "\(key),\(csvField(history.name)),\(csvField(name)),\(b.received),\(b.sent),\n"
                 }
@@ -281,13 +285,13 @@ final class TrafficMonitor: ObservableObject {
         }
         func estimateCSV(day: String, network: String, record: DayRecord) {
             guard let estimate = record.withoutLAN else { return }
-            content += "\(day),\(csvField(network)),整机网卡（扣除局域网估算）,\(estimate.bytes.received),\(estimate.bytes.sent),\(Int(estimate.seconds))\n"
+            content += "\(day),\(csvField(network)),\(tr("Physical interfaces (LAN excluded, estimate)", "整机网卡（扣除局域网估算）")),\(estimate.bytes.received),\(estimate.bytes.sent),\(Int(estimate.seconds))\n"
         }
-        for (day, record) in ledger.days.sorted(by: { $0.key < $1.key }) { estimateCSV(day: day, network: "全部网络", record: record) }
+        for (day, record) in ledger.days.sorted(by: { $0.key < $1.key }) { estimateCSV(day: day, network: all, record: record) }
         for history in ledger.networks.values.sorted(by: { $0.name < $1.name }) {
             for (day, record) in history.days.sorted(by: { $0.key < $1.key }) { estimateCSV(day: day, network: history.name, record: record) }
         }
         do { try ("\u{FEFF}" + content).write(to: url, atomically: true, encoding: .utf8) }
-        catch { status = "导出失败：\(error.localizedDescription)" }
+        catch { status = tr("Export failed: ", "导出失败：") + error.localizedDescription; statusIsError = true }
     }
 }

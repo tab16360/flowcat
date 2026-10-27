@@ -1,0 +1,4 @@
+"CFBundleName" = "FlowCat";
+"CFBundleDisplayName" = "FlowCat";
+"NSLocationUsageDescription" = "FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.";
+"NSLocationWhenInUseUsageDescription" = "FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.";

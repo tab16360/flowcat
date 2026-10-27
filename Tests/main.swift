@@ -50,7 +50,19 @@ expect(ledger.sum(keys: ["2026-10-08"]).physical.total == 0, "no fabricated pre-
 let data = try JSONEncoder().encode(ledger)
 let restored = try JSONDecoder().decode(Ledger.self, from: data)
 expect(restored.sum(keys: monthKeys).physical == monthly.physical, "history survives JSON round trip")
-expect(volume(10000000000) == "10.00 GB", "decimal units match mobile data units")
+expect(volume(10000000000) == "10.0 GB", "decimal units match mobile data units")
+expect(volume(180_000_000) == "180 MB" && volume(2_630_000_000) == "2.63 GB" && volume(9_996_000) == "10.0 MB", "volumes keep three significant digits")
+Localization.shared.forced = .chinese
+expect(coverageText(14_400) == "已记录 4 小时 0 分" && coverageText(90) == "已记录 1 分", "coverage text is shared by network and disk")
+Localization.shared.forced = .english
+expect(coverageText(14_400) == "Recorded 4h 0m" && DiskPeriod.seven.title == "Last 7 days", "English is available for shared labels")
+Localization.shared.forced = .chinese
+var hourly = Ledger(firstStarted: date)
+hourly.add(day: "2026-10-10", physical: Bytes(received: 100), processes: [:], seconds: 10, network: NetworkContext(key: "wifi:Home", name: "Home", identified: true), breakdown: TrafficBreakdown(), hour: "1000")
+hourly.add(day: "2026-10-10", physical: Bytes(received: 50), processes: [:], seconds: 10, hour: "1000")
+expect(hourly.days["2026-10-10"]?.hours?["1000"]?.received == 150 && hourly.day("2026-10-10", networkName: "Home").hours?["1000"]?.received == 100, "hour buckets follow all-network and per-SSID totals")
+expect(hourly.day("2026-10-10").hoursWithoutLAN?["1000"]?.received == 100, "hourly LAN estimate only covers intervals with a breakdown")
+expect(DateKeys.keys(period: 3, now: date, available: [], calendar: calendar).count == 7, "network 7-day period includes today")
 var classified = Ledger(firstStarted: date)
 classified.add(day: "2026-10-09", physical: Bytes(received: 1000), processes: ["UU": Bytes(received: 800)], seconds: 10,
     network: NetworkContext(key: "wifi:RMB", name: "RMB", identified: true))

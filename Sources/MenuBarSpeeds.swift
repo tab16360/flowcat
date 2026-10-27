@@ -7,8 +7,12 @@ enum MenuBarSpeeds {
         var columns: [[String]] = []
         let traffic = [total, network].compactMap { $0 }
         if !traffic.isEmpty { columns.append(traffic) }
-        if let read, let write { columns.append(["读 " + read, "写 " + write]) }
+        if let read, let write { columns.append([tr("R ", "读 ") + read, tr("W ", "写 ") + write]) }
         return columns
+    }
+    static func template(_ label: String) -> String {
+        label.replacingOccurrences(of: "[0-9]+(\\.[0-9]+)?", with: "88.8", options: .regularExpression)
+            .replacingOccurrences(of: " B/s", with: " KB/s")
     }
     static func image(total: String? = nil, network: String?, read: String? = nil, write: String? = nil) -> NSImage {
         let columns = columns(total: total, network: network, read: read, write: write)
@@ -16,7 +20,9 @@ enum MenuBarSpeeds {
         let normal: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: NSColor.black]
         let widths = columns.map { rows -> CGFloat in
             let attributes = rows.count == 2 ? small : normal
-            return ceil(rows.map { ($0 as NSString).size(withAttributes: attributes).width }.max() ?? 0)
+            // Measure a fixed-digit template so the status item does not shift as values change.
+            return ceil(rows.map { max(($0 as NSString).size(withAttributes: attributes).width,
+                                       (template($0) as NSString).size(withAttributes: attributes).width) }.max() ?? 0)
         }
         let image = NSImage(size: NSSize(width: 18 + widths.reduce(0, +) + CGFloat(columns.count * 6), height: 22))
         image.lockFocus()
@@ -35,11 +41,11 @@ enum MenuBarSpeeds {
     }
     static func preview() -> NSImage {
         let examples: [(String, String?, String?, String?, String?)] = [
-            ("仅累计", "今 1.28 GB", nil, nil, nil),
-            ("仅网速", nil, "↓219.00 KB/s", nil, nil),
-            ("累计 + 网速", "今 1.28 GB", "↓219.00 KB/s", nil, nil),
-            ("累计 + 网速 + 磁盘", "今 1.28 GB", "↓219.00 KB/s", "1.28 MB/s", "640.00 KB/s"),
-            ("仅磁盘", nil, nil, "1.28 MB/s", "640.00 KB/s")]
+            (tr("Today's total", "仅累计"), tr("Today ", "今 ") + "1.28 GB", nil, nil, nil),
+            (tr("Network speed", "仅网速"), nil, "↓219 KB/s", nil, nil),
+            (tr("Total + speed", "累计 + 网速"), tr("Today ", "今 ") + "1.28 GB", "↓219 KB/s", nil, nil),
+            (tr("Total + speed + disk", "累计 + 网速 + 磁盘"), tr("Today ", "今 ") + "1.28 GB", "↓219 KB/s", "1.28 MB/s", "640 KB/s"),
+            (tr("Disk only", "仅磁盘"), nil, nil, "1.28 MB/s", "640 KB/s")]
         let image = NSImage(size: NSSize(width: 460, height: 210))
         image.lockFocus()
         NSColor.white.setFill(); NSRect(x: 0, y: 0, width: 460, height: 210).fill()

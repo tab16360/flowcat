@@ -1,0 +1,5 @@
+"CFBundleName" = "流量喵";
+"CFBundleDisplayName" = "流量喵";
+"NSLocationUsageDescription" = "仅用于读取当前 Wi-Fi 名称，将流量按网络分别统计；不会请求或保存位置坐标。";
+"NSLocationWhenInUseUsageDescription" = "仅用于读取当前 Wi-Fi 名称，将流量按网络分别统计；不会请求或保存位置坐标。";
+"NSHumanReadableCopyright" = "Mac 网络与磁盘监控工具";

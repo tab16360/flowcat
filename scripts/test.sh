@@ -11,7 +11,7 @@ trap 'rm -f "$test_binary" "$integration_binary" "$disk_binary" "$native_object"
 xcrun swiftc -swift-version 5 -module-cache-path "$CLANG_MODULE_CACHE_PATH" Sources/Core.swift Sources/MenuBarSpeeds.swift Sources/BrandIcon.swift Sources/ProcessLocation.swift Sources/DiskCore.swift Sources/DiskAlerts.swift Sources/UpdateInfo.swift Sources/UpdateInstaller.swift Tests/main.swift -o "$test_binary"
 "$test_binary"
 
-xcrun swiftc -swift-version 5 -module-cache-path "$CLANG_MODULE_CACHE_PATH" Sources/UpdateInfo.swift Sources/UpdateInstaller.swift Tests/UpdateIntegration.swift -o "$integration_binary"
+xcrun swiftc -swift-version 5 -module-cache-path "$CLANG_MODULE_CACHE_PATH" Sources/Core.swift Sources/UpdateInfo.swift Sources/UpdateInstaller.swift Tests/UpdateIntegration.swift -o "$integration_binary"
 "$integration_binary"
 
 xcrun clang -O2 -c Sources/HardwareBridge.c -o "$native_object"

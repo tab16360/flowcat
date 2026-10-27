@@ -36,7 +36,7 @@ enum BrandIcon {
             draw(in: rect, application: false); return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "流量喵"
+        image.accessibilityDescription = "FlowCat"
         return image
     }
 }

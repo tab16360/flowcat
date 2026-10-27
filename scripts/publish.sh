@@ -19,16 +19,16 @@ if [ "$owner" != tab16360 ]; then
 from pathlib import Path
 import sys
 owner = sys.argv[1]
-for filename in ['README.md', 'docs/index.html']:
+for filename in ['README.md', 'README.zh-CN.md', 'docs/index.html', 'docs/zh/index.html', 'Sources/Core.swift', '.github/FUNDING.yml']:
     p = Path(filename)
-    p.write_text(p.read_text().replace('github.com/tab16360/', f'github.com/{owner}/').replace('tab16360.github.io', f'{owner}.github.io'))
+    p.write_text(p.read_text().replace('github.com/tab16360/', f'github.com/{owner}/').replace('github.com/sponsors/tab16360', f'github.com/sponsors/{owner}').replace('tab16360.github.io', f'{owner}.github.io').replace('github: tab16360', f'github: {owner}'))
 PY
-  git add README.md docs/index.html
-  git commit -m '设置项目发布链接'
+  git add README.md README.zh-CN.md docs/index.html docs/zh/index.html Sources/Core.swift .github/FUNDING.yml
+  git commit -m 'Set project publishing links'
 fi
 bash scripts/test.sh
 bash scripts/package.sh
-gh repo create "$repo" --public --source . --remote origin --push --description '原生 macOS 菜单栏流量喵：进程排行、按 Wi-Fi 统计、今日/昨日/月流量'
+gh repo create "$repo" --public --source . --remote origin --push --description 'FlowCat - Network & Disk Monitor for Mac: live speed, per-process disk writes and SMART health in the menu bar'
 gh api --method POST "repos/$repo/pages" -f build_type=workflow >/dev/null
 gh repo edit "$repo" --homepage "https://$owner.github.io/flowcat/"
 gh workflow run pages.yml --repo "$repo" --ref main

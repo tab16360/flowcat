@@ -62,13 +62,13 @@ enum DiskHardware {
         process.waitUntilExit(); group.wait()
         guard process.terminationStatus == 0,
               let result = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
-            throw Failure(message: "无法读取磁盘信息，请检查连接后重试。")
+            throw Failure(message: tr("Could not read disk information. Check the connection and try again.", "无法读取磁盘信息，请检查连接后重试。"))
         }
         return result
     }
     static func read() throws -> [DiskDevice] {
         let listing = try plist(["list", "-plist", "physical"])
-        guard let disks = listing["WholeDisks"] as? [String] else { throw Failure(message: "未能列出物理磁盘。") }
+        guard let disks = listing["WholeDisks"] as? [String] else { throw Failure(message: tr("Could not list physical disks.", "未能列出物理磁盘。")) }
         var volumeNames: [String: Set<String>] = [:]
         if let apfs = try? plist(["apfs", "list", "-plist"]), let containers = apfs["Containers"] as? [[String: Any]] {
             for container in containers {
@@ -92,7 +92,7 @@ enum DiskHardware {
                     let result = id.withCString { fc_read_nvme($0, &value) }
                     if result == 0 {
                         disk.status = value.warning == 0 ? .normal : .warning
-                        disk.message = value.warning == 0 ? "磁盘自身报告未检测到硬件警告。" : "磁盘报告硬件警告，建议尽快备份重要数据。"
+                        disk.message = value.warning == 0 ? tr("The drive reports no hardware warnings.", "磁盘自身报告未检测到硬件警告。") : tr("The drive reports a hardware warning. Back up important data soon.", "磁盘报告硬件警告，建议尽快备份重要数据。")
                         disk.temperature = value.temperature > -273 ? Int(value.temperature) : nil
                         disk.enduranceUsed = Int(value.used); disk.availableSpare = Int(value.spare)
                         func units(_ value: UInt64, _ valid: UInt8) -> UInt64? {
@@ -101,9 +101,9 @@ enum DiskHardware {
                         disk.hostRead = units(value.read_units, value.valid_read); disk.hostWritten = units(value.written_units, value.valid_written)
                         disk.powerOnHours = value.valid_hours != 0 ? value.hours : nil; disk.mediaErrors = value.valid_errors != 0 ? value.errors : nil
                     } else if result == 2 && disk.status == .unavailable {
-                        disk.status = .permission; disk.message = "系统拒绝读取硬件健康信息。可继续查看进程读写统计。"
+                        disk.status = .permission; disk.message = tr("macOS denied access to hardware health. Process disk activity is still available.", "系统拒绝读取硬件健康信息。可继续查看进程读写统计。")
                     } else if result == 3 && disk.status == .unavailable {
-                        disk.status = .failed; disk.message = "本次未能读取硬件健康信息，请重试。"
+                        disk.status = .failed; disk.message = tr("Could not read hardware health this time. Try again.", "本次未能读取硬件健康信息，请重试。")
                     }
                 }
                 if let names = volumeNames[id], !names.isEmpty { disk.name = names.sorted().joined(separator: " · ") }
@@ -153,11 +153,11 @@ final class DiskMonitor: ObservableObject {
         if FileManager.default.fileExists(atPath: file.path) {
             do {
                 let value = try JSONDecoder().decode(DiskLedger.self, from: Data(contentsOf: file))
-                guard value.version == 1 else { throw DiskHardware.Failure(message: "磁盘历史版本不受支持") }
+                guard value.version == 1 else { throw DiskHardware.Failure(message: tr("Unsupported disk history version", "磁盘历史版本不受支持")) }
                 ledger = value
             } catch {
                 ledger = DiskLedger(); writable = false
-                storageError = "磁盘历史无法读取，已保留原文件并停止写入。"
+                storageError = tr("Disk history could not be read. The original file was kept and writing has stopped.", "磁盘历史无法读取，已保留原文件并停止写入。")
             }
         } else { ledger = DiskLedger() }
     }
@@ -189,7 +189,7 @@ final class DiskMonitor: ObservableObject {
                     if interval > 0 { self.readRate = Double(change.read)/interval; self.writeRate = Double(change.written)/interval }
                 }
                 self.denied = snapshot.denied; self.sampledProcesses = snapshot.counters.count
-                self.samplingError = snapshot.valid ? "" : "暂时无法采集磁盘读写，请重试。"
+                self.samplingError = snapshot.valid ? "" : tr("Disk activity is temporarily unavailable. Try again.", "暂时无法采集磁盘读写，请重试。")
                 if snapshot.valid { self.lastSample = snapshot.date }
                 if snapshot.date.timeIntervalSince(self.lastSaved) >= 60 { self.save() }
                 self.onUpdate?()
@@ -219,23 +219,23 @@ final class DiskMonitor: ObservableObject {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             try encoder.encode(ledger).write(to: file, options: .atomic); storageError = ""; dirty = false; lastSaved = Date()
-        } catch { storageError = "磁盘统计保存失败：\(error.localizedDescription)" }
+        } catch { storageError = tr("Could not save disk history: ", "磁盘统计保存失败：") + error.localizedDescription }
     }
     func export() {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "流量喵-磁盘读写-\(DateKeys.day(Date())).csv"
+        let panel = NSSavePanel(); panel.nameFieldStringValue = tr("FlowCat-disk-", "流量喵-磁盘读写-") + "\(DateKeys.day(Date())).csv"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         func field(_ text: String) -> String {
             let guarded = ["=","+","-","@","\t","\r","\n"].contains(String(text.prefix(1))) ? "'"+text : text
             return "\""+guarded.replacingOccurrences(of: "\"", with: "\"\"")+"\""
         }
-        var csv = "日期,进程或应用,路径,读取字节,写入字节,覆盖秒数\n"
+        var csv = tr("Date,Process or app,Path,Bytes read,Bytes written,Covered seconds\n", "日期,进程或应用,路径,读取字节,写入字节,覆盖秒数\n")
         for key in keys.sorted() { if let day = ledger.days[key] {
-            csv += "\(key),已采集进程合计,,\(day.bytes.read),\(day.bytes.written),\(Int(day.seconds))\n"
+            csv += "\(key),\(tr("All sampled processes", "已采集进程合计")),,\(day.bytes.read),\(day.bytes.written),\(Int(day.seconds))\n"
             for value in day.processes.values.sorted(by: { $0.path < $1.path }) {
                 csv += "\(key),\(field(value.name)),\(field(value.path)),\(value.bytes.read),\(value.bytes.written),\n"
             }
         } }
         do { try ("\u{FEFF}"+csv).write(to: url, atomically: true, encoding: .utf8) }
-        catch { storageError = "磁盘统计导出失败：\(error.localizedDescription)" }
+        catch { storageError = tr("Could not export disk history: ", "磁盘统计导出失败：") + error.localizedDescription }
     }
 }

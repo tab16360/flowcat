@@ -13,7 +13,7 @@ struct DiskAlertPreferences: Codable {
     var snoozedUntil: [String: Date] = [:]
 }
 enum DiskAlertKind: String, Codable { case sustained, hourly, daily
-    var title: String { switch self { case .sustained: return "持续高写入"; case .hourly: return "小时写入预算"; case .daily: return "每日写入预算" } }
+    var title: String { switch self { case .sustained: return tr("Sustained high writes", "持续高写入"); case .hourly: return tr("Hourly write budget", "小时写入预算"); case .daily: return tr("Daily write budget", "每日写入预算") } }
 }
 struct DiskWriteAlert: Codable, Identifiable {
     var id = UUID().uuidString

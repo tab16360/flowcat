@@ -1,5 +1,21 @@
 # 更新记录
 
+## Unreleased
+
+FlowCat is now licensed under the Apache License 2.0 (previously MIT).
+
+English is now the base language for the app, website and README; Simplified Chinese stays available and can be chosen in the new Settings window (System default / English / 简体中文). Dates, CSV headers, alerts, update dialogs and permission prompts follow the chosen language, and Finder shows the app as FlowCat on English systems. New English landing page with real screenshots, a Chinese version under /zh/, and a sponsor entry in the app, site and README. `scripts/screenshots.sh` renders all screenshots, the hero, the comparison image and the demo GIF in both languages.
+
+Panel redesign: Network, Disk Activity and Disk Health tabs (⌘1/⌘2/⌘3); the current Wi-Fi moved into the network menu; a 7-day period and hourly or daily traffic charts for network (hourly data starts with this version); numbers use three significant digits and the menu bar item keeps a stable width; compact ranking rows that show the sorted value, a hover ⋯ menu and click-to-expand disk rows; one sort control everywhere; explanations behind ⓘ; Include LAN moved to the More menu and Settings; a paused banner; alerts in the header bell; day-by-day stepping; the disk picker only when there is more than one disk; per-app alert state merged into On / Pause 1 hour / Mute.
+
+## 未发布（中文）
+
+开源许可由 MIT 改为 Apache License 2.0。
+
+英文成为应用、官网与 README 的基础语言，简体中文保留，可在新的设置窗口中切换（跟随系统 / English / 简体中文）。日期、CSV 表头、提醒、更新对话框与权限说明跟随所选语言，英文系统的 Finder 中显示为 FlowCat。新增英文官网（含真实截图）、/zh/ 中文版，以及应用、官网和 README 中的赞助入口。`scripts/screenshots.sh` 一键生成中英文截图、主视觉、对比图与演示 GIF。
+
+界面梳理：顶部改为网络、磁盘读写、磁盘健康三个标签（⌘1／⌘2／⌘3），当前 Wi-Fi 并入网络筛选并置顶。网络新增“7 天”和按小时／按日流量趋势，小时数据从本版起累计。数字统一为三位有效数字，菜单栏宽度不再随数值跳动。排行改为紧凑行，按下载或上传排序时右侧数字随排序显示；悬停出现“⋯”操作，磁盘行点击整行展开；网络与磁盘排序控件统一。说明文字收进 ⓘ 弹出层；“包含局域网”移入更多菜单与新的设置窗口（⌘,），关闭时总量显示“估算”标签，实时网速注明含局域网。暂停按钮移入菜单，暂停时面板顶部显示横幅。写入提醒入口移到顶部铃铛；按日查看可逐日翻页，选中日期直接生效；只有一块磁盘时隐藏磁盘切换。提醒窗口把暂停、不再提醒、恢复合并为一个控件，应用列表可筛选并按今日写入排序，已授权时不再显示通知按钮。
+
 ## 1.6.0
 
 新增通用磁盘写入提醒：持续高写入、小时／每日预算、单应用阈值、忽略一小时和不再提醒；提供分钟写入曲线与最近提醒。系统通知按需授权，拒绝授权仍保留面板记录。复用 10 秒采样，分钟数据只在内存保留一小时，最多跟踪 512 个写入应用，最近提醒限 40 条。缺失采样中断持续判断，提醒跨启动去重。无新采样时不再重复保存网络和磁盘历史，磁盘保存成功后统一更新时间，避免两个保存入口重复写盘。

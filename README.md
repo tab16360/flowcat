@@ -1,85 +1,69 @@
-# 流量喵 · FlowCat
+# FlowCat - Network & Disk Monitor for Mac
 
-<img src="docs/assets/app-icon.png" width="80" alt="流量喵猫咪图标">
+<img src="docs/assets/app-icon.png" width="80" alt="FlowCat cat icon">
 
-一个原生 macOS 菜单栏监控工具。查看网络流量、进程磁盘读写与磁盘健康信息，找到日常开发和远程桌面的消耗来源。
+A native macOS menu bar app for **live network speed**, **per-process disk reads and writes**, and **SMART disk health**. Built to show which AI coding tools (Codex, Claude Code, Cursor and friends) are wearing out your SSD.
 
-**下载包不足 1 MB · macOS 13+ · Apple Silicon · MIT**
+**Under 1 MB · No account · Data stays on your Mac · macOS 13+ · Apple Silicon · Apache-2.0**
 
-[下载最新版](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [介绍站点](https://tab16360.github.io/flowcat/) · [使用说明](docs/guide.md) · [更新记录](CHANGELOG.md)
+[Download](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [Website](https://tab16360.github.io/flowcat/) · [User guide](docs/guide.md) · [Changelog](CHANGELOG.md) · [Sponsor](https://github.com/sponsors/tab16360) · [简体中文](README.zh-CN.md)
 
-关注作者 [@ai_funs](https://x.com/ai_funs)，获取流量喵更新与 AI 工具实践。
+![FlowCat in the menu bar with the network and disk activity panels](docs/assets/screens/hero-en.jpg)
 
-![流量喵界面示意：累计流量、Wi-Fi 筛选与进程排行](docs/assets/product.svg)
+*Screenshots use sample data.*
 
-*上图为界面示意，使用示例数据，并非实际采集截图。*
+## Why FlowCat
 
-## 能做什么
+AI agents and modern editors rebuild indexes, caches and dependencies all day. Your network meter barely moves while gigabytes land on the SSD. FlowCat ranks every process by network traffic **and** by disk writes, and puts the drive's own SMART data next to it.
 
-| 功能 | 说明 |
+![The same AI coding tools ranked by network traffic and by disk writes](docs/assets/screens/compare-en.jpg)
+
+## Features
+
+| | |
 | --- | --- |
-| 菜单栏显示 | 累计、网速、磁盘读写可独立勾选；累计与网速同时显示时上下排列，设置自动保存；默认图标与网速 |
-| 今日／昨日／本月 | 查看各时段整机收发总量与采集覆盖时间 |
-| 应用／代理排行 | 已识别的代理、VPN 单列；合并可识别的 App 辅助进程；支持搜索与总量、下载、上传排序 |
-| 包含局域网 | 总量默认包含局域网；可关闭以扣除已识别的局域网流量（估算），应用排行不受影响；开关自动保存 |
-| 按 Wi-Fi 筛选 | 使用真实 SSID；不能识别或拒绝权限时仅显示全部网络 |
-| 磁盘读写 | 今日、近 7 天、近 30 天、累计与按日查看；按写入、读取或总读写排序，搜索并展开进程归属 |
-| 磁盘健康 | 查看内外置物理磁盘的 SMART 状态、温度、累计主机写入、耐久度已用与通电时间；缺失指标明确标注 |
-| 菜单栏磁盘速度 | 独立开关显示读写速度，默认关闭，网速仍默认显示 |
-| 本地记录 | JSON 持久化，可导出 CSV；无需账号、不上传数据、不记录通信内容 |
-| 右键快捷控制 | 菜单栏图标右键或 Control 点击，打开面板、暂停／继续、登录启动、导出和退出 |
-| 持续运行 | 暂停／继续、登录启动、睡眠恢复后重新建立计数基线 |
+| **Menu bar readout** | Today's total, network speed and disk read/write speed, each optional. The item keeps a fixed width so it doesn't jump around. |
+| **Network** | Today, yesterday, last 7 days or this month, with hourly and daily charts. Filter by real Wi-Fi name. Proxies and VPNs are listed separately so relayed traffic isn't counted twice. |
+| **Disk activity** | Per-process reads and writes for today, 7 days, 30 days, all time or any single day. Sort, search, expand a row for its path, step day by day. |
+| **Disk health** | SMART status, temperature, lifetime host reads and writes, rated endurance used, power-on hours and media errors for internal and external drives. Read natively, no smartctl. |
+| **Write alerts** | Sustained high writes, hourly and daily budgets per app, custom thresholds, pause or mute per app. Optional system notifications. |
+| **Local history** | JSON on your Mac, CSV export, no account, no telemetry, never records traffic contents. |
+| **Native and small** | About 740 KB download, about 2.9 MB installed. No Electron, no runtime. |
+| **English and Chinese** | Follows your system language; switch in Settings. |
+| **Keyboard** | ⌘1/⌘2/⌘3 switch tabs, ⌘F searches, ⌘, opens Settings, Esc closes the panel. |
 
-![统计口径示意：整机总量与进程转发的区别](docs/assets/accounting.svg)
+<table><tr>
+<td><img src="docs/assets/screens/disk-7d-en.png" width="300" alt="Disk activity over the last 7 days"></td>
+<td><img src="docs/assets/screens/health-en.png" width="300" alt="Disk health with SMART status, temperature and lifetime writes"></td>
+<td><img src="docs/assets/screens/network-en.png" width="300" alt="Network panel with hourly traffic and app ranking"></td>
+</tr></table>
 
-菜单栏累计按今日所有网络的上传与下载合计显示，跟随“包含局域网”开关；关闭包含局域网且无估算记录时显示“—”。右键网络或磁盘排行中的应用，选择“打开位置”可在 Finder 定位已记录且仍存在的应用或可执行文件；路径不可用时菜单项禁用。同名进程合并时使用最近记录的可用路径。左键不跳转，磁盘排行的箭头仍可展开详情。
+## Install
 
-![菜单栏累计、网速与磁盘读写组合示意](docs/assets/menu-bar-modes.png)
+1. [Download the latest ZIP](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip).
+2. Unzip and drag the app into Applications, then open it.
+3. Click the cat in the menu bar. The first 10 seconds build a baseline. Turn on **Launch at Login** in the More menu or Settings.
+4. If FlowCat can't read the Wi-Fi name, macOS asks for location permission. You can decline; FlowCat then records under "All networks" and never requests your coordinates.
 
-磁盘写入提醒支持持续高写入、小时／每日预算、单应用阈值与暂时忽略；从磁盘面板底部、应用行右键或更多菜单进入。默认关闭，系统通知按需授权，未授权仍有窗口内记录。复用已有 10 秒采样，分钟曲线仅存内存，不追踪具体文件内容。
+FlowCat is ad-hoc signed and not notarized yet. If macOS blocks the first launch, allow it under System Settings › Privacy & Security after confirming where you downloaded it. You never need to disable system protections.
 
-## 小巧的原生应用
+**Updates:** choose **Check for Updates** in the More menu, then **Install and Relaunch**. FlowCat downloads and verifies the package, replaces itself, keeps your history and settings, and restores the previous version if anything fails. Checks only happen when you ask and only contact GitHub.
 
-**下载包约 740 KB，解压后应用约 2.9 MB。** 无需安装 Node、浏览器内核或第三方运行环境，下载解压即可使用。安装体积不包含本地历史文件，不同构建会略有差异。
+History lives in `~/Library/Application Support/流量账本/` (`ledger.json` for network, `disk-ledger.json` for disk). The folder name is kept from earlier versions so upgrades keep your data. Replacing the app never deletes it.
 
-每 10 秒采样，每分钟保存；统计面板与图标按需加载。历史保存在本机，无需账号，不上传通信内容。
+## Reading the numbers
 
-## 安装
+**Totals** come from the physical `en*` interfaces (loopback and VPN tunnels excluded). They include LAN and protocol overhead and are not a carrier bill. Turn off **Include LAN in Totals** to subtract recognized LAN traffic; the result is labeled as an estimate.
 
-网站与下载链接直接获取最新安装 ZIP。1.4.0 起，应用右键或“更多”菜单的“检查更新”可选择“安装并重启”：自动下载、校验、替换并重启，保留历史和设置，失败时恢复旧版。下载可取消；安装位置需可写。1.3.x 需先手动安装一次 1.4.0。检查由你手动触发，访问 GitHub，不发送统计记录。
+**App rankings** come from `nettop`. Proxies and VPNs may carry traffic for other apps, so don't add ranking rows together to get the machine total.
 
-1. 点击 [下载安装包](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) 下载 `FlowCat-版本-arm64.zip`。
-2. 解压，将 `流量喵.app` 拖入“应用程序”，双击启动。
-3. 点击菜单栏图标。首次运行约 10 秒用于建立基线；“更多”菜单可设置登录启动。
-4. 无法读取 Wi-Fi 名称时会请求系统定位权限。你可以拒绝，统计仍在全部网络下进行，应用不会请求位置坐标。
+**Disk activity** comes from per-process system counters across all disks, with app helpers merged. It is not the physical NAND writes inside the SSD. Use it to find heavy writers, and the health tab for what the drive itself reports. "Rated endurance used" is the drive's own estimate, not remaining life.
 
-应用当前为临时签名、未公证。macOS 可能阻止首次打开；确认来源后按系统设置“隐私与安全性”的提示允许打开，不需要关闭系统安全功能。升级前退出旧版，再替换应用。
+FlowCat only counts time it is running and not paused. It samples every 10 seconds and saves every minute; short-lived processes, sleep and network switches can be missed. Gray chart bars mean "not recorded", never zero.
 
-网络历史保存在 `~/Library/Application Support/流量账本/ledger.json`，磁盘历史另存为同目录的 `disk-ledger.json`。替换应用不会删除历史，卸载时先关闭登录启动并退出。详细说明见 [使用指南](docs/guide.md)。
+## Build from source
 
-## 怎样理解数字
-
-**整机总量**使用 `en*` 物理网络接口计数，排除回环与 VPN 虚拟接口。包含局域网和协议开销；多网卡活动会汇总，不能替代运营商账单。
-
-**包含局域网**开关只影响总量。关闭后，从每个采样区间的物理网卡收发字节中扣除同区间已识别的局域网连接字节，下载、上传分别归零截断后再累计。局域网识别使用物理接口的私有、链路本地及当前 IPv4/IPv6 子网；不读取或修改代理配置。短连接、协议开销与 VPN 内部传输可能无法剔除，因此是估算，不能当作精确外网用量。估算从 1.5.4 起累计，旧历史和应用进程计数不变；没有估算记录时显示“—”。
-
-**应用／代理排行**来自 `nettop`，默认展示应用，已识别的代理和 VPN 在单独列表展示。此分类仅影响展示，不扣减或重分配历史字节。代理、VPN 可能包含其他进程转发的相同流量，因此不要把排行各行相加作为整机总量。
-
-仅统计应用运行且未暂停的时段，不能恢复过去的流量。10 秒采样，每分钟保存；短时进程、睡眠、网络切换和计数器重置可能漏计。网络切换间隔跳过，多物理网卡同时活跃仅计入全部网络。
-
-## 磁盘统计怎么看
-
-在面板顶部切换到“磁盘”。读写量来自进程系统计数器的增量，默认按写入量排行；应用与辅助进程合并，历史保留已退出进程的已采集记录。进程统计覆盖所有磁盘，不提供无法可靠归属的分盘排行。7 天、30 天包含今日；累计自开始监控起算。
-
-磁盘健康按物理磁盘查看，原生读取系统与 IOKit 提供的 SMART 信息，无需安装 smartctl。耐久度已用不等于剩余寿命，进程写入也不等于 SSD 闪存实际写入。部分系统进程受权限限制，短暂进程可能漏采；外置硬盘盒可能不提供健康信息。健康信息按需读取，之后约每 10 分钟刷新，也可手动刷新；不进行磁盘自检或修改硬件设置。
-
-<table><tr><td><img src="docs/assets/disk-io.png" width="300" alt="磁盘读写统计示例"></td><td><img src="docs/assets/disk-health.png" width="300" alt="磁盘健康信息示例"></td></tr></table>
-
-*原生界面截图使用示例数据。真实可读指标取决于硬件、连接与系统权限。*
-
-## 从源码构建
-
-需要 macOS 13+ 和 Xcode Command Line Tools，不需要 Node、pnpm 或第三方库。
+Requires macOS 13+ and the Xcode Command Line Tools. No third-party dependencies.
 
 ```sh
 git clone https://github.com/tab16360/flowcat.git
@@ -89,42 +73,28 @@ bash scripts/build.sh
 open build/流量喵.app
 ```
 
-构建默认 arm64；可使用 `ARCH=x86_64 bash scripts/build.sh` 尝试 Intel 构建，当前未进行 Intel 运行验收。创建发布包：
-
-```sh
-bash scripts/package.sh
-# 输出 dist/FlowCat-1.6.0-arm64.zip 及其 SHA-256
-```
-
-应用图标与菜单栏猫咪共用 `Sources/BrandIcon.swift` 中的矢量造型。修改后运行 `bash scripts/icons.sh` 重新生成应用图标及站点预览。
-
-## 项目结构
+The build is arm64 by default; `ARCH=x86_64 bash scripts/build.sh` tries an Intel build, which is not release-tested. `bash scripts/package.sh` creates the release ZIP and its SHA-256. `bash scripts/screenshots.sh` re-renders every screenshot, the hero image and the demo GIF in English and Chinese from sample data. The app bundle keeps its original `流量喵.app` file name so in-app updates from older versions keep working; Finder shows it as FlowCat on English systems.
 
 ```text
-Sources/       SwiftUI 界面、采样、SSID 识别与统计核心
-Tests/         核心统计回归检查
-scripts/       构建、检查、打包和发布
-Info.plist     应用身份、版本与权限说明
-docs/          静态介绍站点、图示与使用指南
-.github/       CI、GitHub Pages 与 tag Release 工作流
+Sources/    SwiftUI interface, sampling, Wi-Fi detection, statistics, updater
+Resources/  Localized bundle name and permission prompts
+Tests/      Statistics, disk, alert and updater checks
+scripts/    Build, test, package, screenshots and release
+docs/       Website (English and /zh/), guides and images
 ```
 
-本地预览介绍页：`python3 -m http.server 8080 --directory docs`，访问 `http://localhost:8080`。页面不使用第三方 CDN、跟踪器或外部字体。
+Preview the website locally with `python3 -m http.server 8080 --directory docs` and open `http://localhost:8080`. It uses no CDN, trackers or web fonts.
 
-## 发布与维护
+## Release
 
-CI 检查核心统计并生成安装包。`main` 上的站点更新由 GitHub Pages 工作流发布。发布前更新 `Info.plist`、`CHANGELOG.md` 和 `RELEASE_NOTES.md`，然后推送与版本一致的 `vX.Y.Z` 标签；Release 工作流验证、打包并上传 ZIP 与校验文件。
+CI runs the checks and builds the package. Pushes to `main` that touch `docs/` publish the website through GitHub Pages. To release, update `Info.plist`, `CHANGELOG.md` and `RELEASE_NOTES.md`, then push a matching `vX.Y.Z` tag. See the [release guide](docs/releasing.md) and [CONTRIBUTING](CONTRIBUTING.md).
 
-完整发布步骤见 [发布指南](docs/releasing.md)，参与开发见 [CONTRIBUTING](CONTRIBUTING.md)。
+## Windows
 
-## 验证状态
+A separate Windows version (C++20 / Win32 / Direct2D) lives in [flowcat-windows](https://github.com/tab16360/flowcat-windows). This repository maintains the macOS app.
 
-1.6.0 已通过本机构建、签名及 159 项核心统计、磁盘持久化、更新检查；包含菜单栏组合排列、历史路径保存、局域网扣除与 Wi-Fi 隔离检查。已实测本机进程采样、内置 SSD 健康字段与外置盘未提供状态，并渲染浅色、深色、窄屏和短屏原生界面。桌面自动化连接暂不可用，完整鼠标交互、权限弹窗和多显示器场景尚未验收。图示不能替代运行测试。
+## Sponsor
 
-## Windows 版
+FlowCat is free and built in spare time. If it helped you catch a runaway process, consider [sponsoring on GitHub](https://github.com/sponsors/tab16360). Follow [@ai_funs](https://x.com/ai_funs) for updates.
 
-Windows 版已迁入独立仓库：[flowcat-windows](https://github.com/tab16360/flowcat-windows)。使用 C++20 / Win32 / Direct2D，后台采集服务与普通权限托盘界面分离，提供独立安装器、Wi-Fi 筛选、设置与更新渠道。
-
-[Windows 介绍与下载](https://tab16360.github.io/flowcat/windows/)。本仓库继续维护 macOS 版。
-
-采用 [MIT 许可证](LICENSE)。
+Released under the [Apache License 2.0](LICENSE).

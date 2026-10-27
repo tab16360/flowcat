@@ -36,8 +36,13 @@ struct DiskDay: Codable {
 }
 enum DiskPeriod: String, CaseIterable {
     case today, seven, thirty, all, date
-    var title: String { switch self { case .today: return "今日"; case .seven: return "近 7 天"; case .thirty: return "近 30 天"; case .all: return "累计"; case .date: return "所选日期" } }
-    var short: String { switch self { case .seven: return "7 天"; case .thirty: return "30 天"; default: return title } }
+    var title: String {
+        switch self {
+        case .today: return tr("Today", "今日"); case .seven: return tr("Last 7 days", "近 7 天"); case .thirty: return tr("Last 30 days", "近 30 天")
+        case .all: return tr("All time", "累计"); case .date: return tr("Selected day", "所选日期")
+        }
+    }
+    var short: String { switch self { case .seven: return tr("7D", "7 天"); case .thirty: return tr("30D", "30 天"); default: return title } }
     func keys(now: Date, date: Date, available: [String], calendar: Calendar = .current) -> [String] {
         switch self {
         case .all: return available.filter { $0 <= DateKeys.day(now, calendar: calendar) }.sorted()
@@ -125,7 +130,7 @@ struct DiskDevice: Codable, Identifiable {
     var capacity: UInt64
     var solidState: Bool
     var status: DiskHealthStatus = .unavailable
-    var message = "此连接未提供 SMART 健康信息。"
+    var message = tr("This connection does not provide SMART health data.", "此连接未提供 SMART 健康信息。")
     var temperature: Int?
     var enduranceUsed: Int?
     var availableSpare: Int?
@@ -141,8 +146,8 @@ struct DiskDevice: Codable, Identifiable {
             solidState: info["SolidState"] as? Bool ?? false)
         if disk.name.isEmpty { disk.name = id }
         switch string("SMARTStatus").lowercased() {
-        case "verified": disk.status = .normal; disk.message = "磁盘自身报告未检测到硬件警告。"
-        case "failing", "failed": disk.status = .warning; disk.message = "建议尽快备份重要数据，并检查磁盘。"
+        case "verified": disk.status = .normal; disk.message = tr("The drive reports no hardware warnings.", "磁盘自身报告未检测到硬件警告。")
+        case "failing", "failed": disk.status = .warning; disk.message = tr("Back up important data soon and check the drive.", "建议尽快备份重要数据，并检查磁盘。")
         default: break
         }
         // Newer macOS exposes these optional NVMe fields. Older systems use the native IOKit fallback.
@@ -159,4 +164,4 @@ struct DiskDevice: Codable, Identifiable {
         return disk
     }
 }
-func diskVolume(_ bytes: UInt64) -> String { bytes >= 1_000_000_000_000 ? String(format: "%.2f TB", Double(bytes)/1e12) : volume(bytes) }
+func diskVolume(_ bytes: UInt64) -> String { bytes >= 1_000_000_000_000 ? significant(Double(bytes)/1e12) + " TB" : volume(bytes) }

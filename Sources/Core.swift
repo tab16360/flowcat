@@ -1,5 +1,43 @@
 import Foundation
 import Darwin
+import Combine
+
+// English is the base language; Simplified Chinese is kept as an option.
+// "System" follows the first preferred macOS language.
+enum AppLanguage: String, CaseIterable {
+    case system, english, chinese
+}
+final class Localization: ObservableObject {
+    static let shared = Localization()
+    @Published var preference: AppLanguage {
+        didSet { defaults.set(preference.rawValue, forKey: "appLanguage"); onChange?() }
+    }
+    // Tests pin a language without touching user defaults.
+    var forced: AppLanguage?
+    var onChange: (() -> Void)?
+    private let defaults = UserDefaults.standard
+    init() { preference = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? "") ?? .system }
+    var isChinese: Bool {
+        switch forced ?? preference {
+        case .chinese: return true
+        case .english: return false
+        case .system: return Locale.preferredLanguages.first?.hasPrefix("zh") ?? false
+        }
+    }
+}
+enum Links {
+    static let repository = URL(string: "https://github.com/tab16360/flowcat")!
+    // One place to change the sponsor destination for the app, site and README.
+    static let sponsor = URL(string: "https://github.com/sponsors/tab16360")!
+}
+// Dates follow the app language rather than the system region.
+var appLocale: Locale { Locale(identifier: Localization.shared.isChinese ? "zh_Hans_CN" : "en_US") }
+func appDate(_ date: Date, date dateStyle: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+    date.formatted(Date.FormatStyle(date: dateStyle, time: time).locale(appLocale))
+}
+// Chart axes always use a 24-hour clock so the last label can read 24:00.
+func hourLabel(_ date: Date, calendar: Calendar = .current) -> String { String(format: "%02d:00", calendar.component(.hour, from: date)) }
+func tr(_ english: String, _ chinese: String) -> String { Localization.shared.isChinese ? chinese : english }
 
 struct Bytes: Codable, Equatable {
     var received: UInt64 = 0
@@ -26,6 +64,14 @@ struct DayRecord: Codable {
     var monitoredSeconds: Double = 0
     var breakdown: TrafficBreakdown? = nil
     var withoutLAN: LANExcludedTotal? = nil
+    // Hour buckets keyed by the hour's start epoch; absent for history recorded before 1.7.
+    var hours: [String: Bytes]? = nil
+    var hoursWithoutLAN: [String: Bytes]? = nil
+    mutating func addHour(_ key: String?, physical: Bytes, withoutLAN: LANExcludedTotal?) {
+        guard let key else { return }
+        var all = hours ?? [:]; all[key, default: Bytes()].add(physical); hours = all
+        if let withoutLAN { var lan = hoursWithoutLAN ?? [:]; lan[key, default: Bytes()].add(withoutLAN.bytes); hoursWithoutLAN = lan }
+    }
 }
 struct NetworkContext: Equatable {
     var key: String
@@ -57,7 +103,7 @@ struct Ledger: Codable {
     }
     mutating func add(day: String, physical: Bytes, processes: [String: Bytes], seconds: Double,
                       network: NetworkContext = NetworkContext(key: "__all__", name: "全部网络", identified: false),
-                      breakdown: TrafficBreakdown? = nil) {
+                      breakdown: TrafficBreakdown? = nil, hour: String? = nil) {
         // Subtract only observed physical-interface LAN deltas from the same interval.
         // Clamp each direction independently; never infer older intervals from aggregate history.
         let withoutLAN = breakdown.map { LANExcludedTotal(bytes: physical.difference(from: $0.local), seconds: seconds) }
@@ -71,6 +117,7 @@ struct Ledger: Codable {
         }
         if let breakdown { var value = record.breakdown ?? TrafficBreakdown(); value.add(breakdown); record.breakdown = value }
         if let withoutLAN { var value = record.withoutLAN ?? LANExcludedTotal(); value.add(withoutLAN); record.withoutLAN = value }
+        record.addHour(hour, physical: physical, withoutLAN: withoutLAN)
         days[day] = record
         guard network.identified, network.key.hasPrefix("wifi:") else { return }
         var history = networks[network.key] ?? NetworkHistory(name: network.name)
@@ -82,7 +129,22 @@ struct Ledger: Codable {
         }
         if let breakdown { var value = netDay.breakdown ?? TrafficBreakdown(); value.add(breakdown); netDay.breakdown = value }
         if let withoutLAN { var value = netDay.withoutLAN ?? LANExcludedTotal(); value.add(withoutLAN); netDay.withoutLAN = value }
+        netDay.addHour(hour, physical: physical, withoutLAN: withoutLAN)
         history.days[day] = netDay; networks[network.key] = history
+    }
+    func day(_ key: String, networkName: String? = nil) -> DayRecord {
+        networkName.map { selected in networks.values.filter { $0.name == selected }.reduce(into: DayRecord()) { result, history in
+            guard let day = history.days[key] else { return }
+            result = Ledger.merge(result, day)
+        } } ?? days[key] ?? DayRecord()
+    }
+    private static func merge(_ a: DayRecord, _ b: DayRecord) -> DayRecord {
+        var result = a
+        result.physical.add(b.physical); result.monitoredSeconds += b.monitoredSeconds
+        if let estimate = b.withoutLAN { var value = result.withoutLAN ?? LANExcludedTotal(); value.add(estimate); result.withoutLAN = value }
+        for (key, bytes) in b.hours ?? [:] { var value = result.hours ?? [:]; value[key, default: Bytes()].add(bytes); result.hours = value }
+        for (key, bytes) in b.hoursWithoutLAN ?? [:] { var value = result.hoursWithoutLAN ?? [:]; value[key, default: Bytes()].add(bytes); result.hoursWithoutLAN = value }
+        return result
     }
     func sum(keys: [String], networkName: String? = nil) -> DayRecord {
         var result = DayRecord()
@@ -138,6 +200,10 @@ enum Parsers {
     }
 }
 enum DateKeys {
+    static func hour(_ date: Date, calendar: Calendar = .current) -> String {
+        let start = calendar.dateInterval(of: .hour, for: date)?.start ?? date
+        return String(Int(start.timeIntervalSince1970))
+    }
     static func day(_ date: Date, calendar: Calendar = .current) -> String {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
@@ -147,16 +213,31 @@ enum DateKeys {
         switch period {
         case 1: return [day(calendar.date(byAdding: .day, value: -1, to: now)!, calendar: calendar)]
         case 2: return available.filter { $0.hasPrefix(String(day(now, calendar: calendar).prefix(7))) }
+        case 3: return (0..<7).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: now) }.map { day($0, calendar: calendar) }
         default: return [day(now, calendar: calendar)]
         }
     }
 }
+// Three significant digits keep panel rows and the menu bar readable without hiding scale.
 func volume(_ bytes: UInt64) -> String {
     let value = Double(bytes)
     for (unit, divisor) in [("GB", 1e9), ("MB", 1e6), ("KB", 1e3)] {
-        if value >= divisor { return String(format: "%.2f %@", value / divisor, unit) }
+        if value >= divisor { return significant(value / divisor) + " " + unit }
     }
     return "\(bytes) B"
+}
+func significant(_ value: Double) -> String {
+    // Round first so 9.996 becomes "10.0" instead of "10.00".
+    let rounded2 = (value * 100).rounded() / 100, rounded1 = (value * 10).rounded() / 10
+    if rounded2 < 10 { return String(format: "%.2f", rounded2) }
+    if rounded1 < 100 { return String(format: "%.1f", rounded1) }
+    return String(format: "%.0f", value.rounded())
+}
+func coverageText(_ seconds: Double) -> String {
+    let value = max(0, Int(seconds))
+    if value < 60 { return tr("Recorded \(value)s", "已记录 \(value) 秒") }
+    if value < 3600 { return tr("Recorded \(value/60)m", "已记录 \(value/60) 分") }
+    return tr("Recorded \(value/3600)h \((value%3600)/60)m", "已记录 \(value/3600) 小时 \((value%3600)/60) 分")
 }
 
 // Classify presentation only; never subtract relayed bytes or rewrite historical counters.

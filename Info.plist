@@ -3,16 +3,19 @@
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>FlowCat</string>
 <key>CFBundleIdentifier</key><string>local.gww.trafficledger</string>
-<key>CFBundleName</key><string>流量喵</string>
-<key>CFBundleDisplayName</key><string>流量喵</string>
+<key>CFBundleName</key><string>FlowCat</string>
+<key>CFBundleDisplayName</key><string>FlowCat</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hans</string></array>
+<key>LSHasLocalizedDisplayName</key><true/>
 <key>CFBundleIconFile</key><string>FlowCat.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.6.0</string>
 <key>CFBundleVersion</key><string>25</string>
-<key>NSLocationUsageDescription</key><string>仅用于读取当前 Wi-Fi 名称，将流量按网络分别统计；不会请求或保存位置坐标。</string>
-<key>NSLocationWhenInUseUsageDescription</key><string>仅用于读取当前 Wi-Fi 名称，将流量按网络分别统计；不会请求或保存位置坐标。</string>
+<key>NSLocationUsageDescription</key><string>FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
-<key>NSHumanReadableCopyright</key><string>本地流量统计工具</string>
+<key>NSHumanReadableCopyright</key><string>Network and disk monitor for Mac</string>
 </dict></plist>

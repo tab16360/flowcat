@@ -32,33 +32,33 @@ final class UpdateChecker {
                 request.setValue("FlowCat-update-check", forHTTPHeaderField: "User-Agent")
                 request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
                 let (data, response) = try await session.data(for: request)
-                guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw updateError("GitHub 暂时无法返回版本信息，请稍后重试。") }
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw updateError(tr("GitHub did not return release information. Try again later.", "GitHub 暂时无法返回版本信息，请稍后重试。")) }
                 let release = try JSONDecoder().decode(ReleaseInfo.self, from: data)
                 let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
-                guard ReleaseInfo.validVersion(release.version), !release.draft, !release.prerelease else { throw updateError("版本信息异常，请稍后重试。") }
+                guard ReleaseInfo.validVersion(release.version), !release.draft, !release.prerelease else { throw updateError(tr("The release information looks invalid. Try again later.", "版本信息异常，请稍后重试。")) }
                 NSApp.activate(ignoringOtherApps: true)
                 let alert = NSAlert()
                 guard release.isNewer(than: current) else {
-                    alert.messageText = "已是最新版本"; alert.informativeText = "当前版本：\(current)"
-                    alert.addButton(withTitle: "好"); alert.runModal(); return
+                    alert.messageText = tr("FlowCat is up to date", "已是最新版本"); alert.informativeText = tr("Current version: ", "当前版本：") + current
+                    alert.addButton(withTitle: tr("OK", "好")); alert.runModal(); return
                 }
-                guard let asset = release.installationAsset else { throw updateError("该版本暂时缺少可校验的 Apple Silicon 安装包。") }
-                alert.messageText = "流量喵 \(release.version) 可更新"
-                alert.informativeText = "当前版本：\(current)\n\n\(String((release.body ?? "").prefix(800)))\n\n自动下载并校验安装包，替换应用后重新启动。历史和设置保留。"
-                alert.addButton(withTitle: "安装并重启"); alert.addButton(withTitle: "稍后")
+                guard let asset = release.installationAsset else { throw updateError(tr("This release has no verifiable Apple Silicon package yet.", "该版本暂时缺少可校验的 Apple Silicon 安装包。")) }
+                alert.messageText = tr("FlowCat \(release.version) is available", "流量喵 \(release.version) 可更新")
+                alert.informativeText = tr("Current version: ", "当前版本：") + current + "\n\n\(String((release.body ?? "").prefix(800)))\n\n" + tr("FlowCat downloads and verifies the package, replaces the app and relaunches. History and settings are kept.", "自动下载并校验安装包，替换应用后重新启动。历史和设置保留。")
+                alert.addButton(withTitle: tr("Install and Relaunch", "安装并重启")); alert.addButton(withTitle: tr("Later", "稍后"))
                 guard alert.runModal() == .alertFirstButtonReturn else { return }
-                showProgress("正在下载 \(release.version)…")
+                showProgress(tr("Downloading \(release.version)…", "正在下载 \(release.version)…"))
                 let root = UpdateInstaller.cacheRoot
                 let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                 workspace = directory
                 var downloadRequest = URLRequest(url: asset.browser_download_url); downloadRequest.timeoutInterval = 60
                 let (temporary, downloadResponse) = try await session.download(for: downloadRequest)
-                guard (downloadResponse as? HTTPURLResponse)?.statusCode == 200 else { throw updateError("安装包下载失败，请稍后重试。") }
+                guard (downloadResponse as? HTTPURLResponse)?.statusCode == 200 else { throw updateError(tr("The download failed. Try again later.", "安装包下载失败，请稍后重试。")) }
                 try Task.checkCancellation()
                 let archive = directory.appendingPathComponent("update.zip")
                 try FileManager.default.moveItem(at: temporary, to: archive)
-                progressLabel?.stringValue = "正在校验安装包并准备替换…"
+                progressLabel?.stringValue = tr("Verifying the package…", "正在校验安装包并准备替换…")
                 let destination = Bundle.main.bundleURL
                 let pid = ProcessInfo.processInfo.processIdentifier
                 let preparation = Task.detached(priority: .utility) {
@@ -67,7 +67,7 @@ final class UpdateChecker {
                 let prepared = try await withTaskCancellationHandler(operation: { try await preparation.value }, onCancel: { preparation.cancel() })
                 plan = prepared
                 try Task.checkCancellation()
-                cancelButton?.isEnabled = false; progressLabel?.stringValue = "正在保存记录并重新启动…"
+                cancelButton?.isEnabled = false; progressLabel?.stringValue = tr("Saving history and relaunching…", "正在保存记录并重新启动…")
                 try UpdateInstaller.startHelper(prepared)
                 handedOff = true
                 // applicationWillTerminate saves the ledger before the helper observes this PID exiting.
@@ -79,21 +79,21 @@ final class UpdateChecker {
     }
     private func showProgress(_ text: String) {
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 160), styleMask: [.titled], backing: .buffered, defer: false)
-        panel.title = "更新流量喵"; panel.isReleasedWhenClosed = false
+        panel.title = tr("Update FlowCat", "更新流量喵"); panel.isReleasedWhenClosed = false
         let label = NSTextField(wrappingLabelWithString: text); label.frame = NSRect(x: 24, y: 100, width: 372, height: 38)
         let progress = NSProgressIndicator(frame: NSRect(x: 24, y: 70, width: 372, height: 16))
         progress.style = .bar; progress.isIndeterminate = true; progress.startAnimation(nil)
-        let cancel = NSButton(title: "取消", target: self, action: #selector(cancelDownload)); cancel.bezelStyle = .rounded
+        let cancel = NSButton(title: tr("Cancel", "取消"), target: self, action: #selector(cancelDownload)); cancel.bezelStyle = .rounded
         cancel.frame = NSRect(x: 308, y: 20, width: 88, height: 30)
         panel.contentView?.addSubview(label); panel.contentView?.addSubview(progress); panel.contentView?.addSubview(cancel)
         panel.center(); panel.makeKeyAndOrderFront(nil)
         progressPanel = panel; progressLabel = label; cancelButton = cancel
     }
-    @objc private func cancelDownload() { task?.cancel(); cancelButton?.isEnabled = false; progressLabel?.stringValue = "正在取消…" }
+    @objc private func cancelDownload() { task?.cancel(); cancelButton?.isEnabled = false; progressLabel?.stringValue = tr("Cancelling…", "正在取消…") }
     private func showError(_ message: String) {
         progressPanel?.close()
         NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert(); alert.messageText = "无法完成更新"; alert.informativeText = message
-        alert.addButton(withTitle: "好"); alert.runModal()
+        let alert = NSAlert(); alert.messageText = tr("Could not finish the update", "无法完成更新"); alert.informativeText = message
+        alert.addButton(withTitle: tr("OK", "好")); alert.runModal()
     }
 }
