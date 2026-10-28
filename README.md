@@ -28,7 +28,7 @@ AI agents and modern editors rebuild indexes, caches and dependencies all day. Y
 | **Disk health** | SMART status, temperature, lifetime host reads and writes, rated endurance used, power-on hours and media errors for internal and external drives. Read natively, no smartctl. |
 | **Write alerts** | Sustained high writes, hourly and daily budgets per app, custom thresholds, pause or mute per app. Optional system notifications. |
 | **Local history** | JSON on your Mac, CSV export, no account, no telemetry, never records traffic contents. |
-| **Native and small** | About 740 KB download, about 2.9 MB installed. No Electron, no runtime. |
+| **Native and small** | About 950 KB download, about 3.4 MB installed. No Electron, no runtime. |
 | **English and Chinese** | Follows your system language; switch in Settings. |
 | **Keyboard** | ⌘1/⌘2/⌘3 switch tabs, ⌘F searches, ⌘, opens Settings, Esc closes the panel. |
 

@@ -1,6 +1,6 @@
 # 更新记录
 
-## Unreleased
+## 1.7.0
 
 FlowCat is now licensed under the Apache License 2.0 (previously MIT).
 
@@ -8,7 +8,7 @@ English is now the base language for the app, website and README; Simplified Chi
 
 Panel redesign: Network, Disk Activity and Disk Health tabs (⌘1/⌘2/⌘3); the current Wi-Fi moved into the network menu; a 7-day period and hourly or daily traffic charts for network (hourly data starts with this version); numbers use three significant digits and the menu bar item keeps a stable width; compact ranking rows that show the sorted value, a hover ⋯ menu and click-to-expand disk rows; one sort control everywhere; explanations behind ⓘ; Include LAN moved to the More menu and Settings; a paused banner; alerts in the header bell; day-by-day stepping; the disk picker only when there is more than one disk; per-app alert state merged into On / Pause 1 hour / Mute.
 
-## 未发布（中文）
+## 1.7.0（中文）
 
 开源许可由 MIT 改为 Apache License 2.0。
 
