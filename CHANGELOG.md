@@ -1,10 +1,10 @@
 # 更新记录
 
-## Unreleased
+## 1.7.1
 
 Removed the sponsor entry from the app menus, Settings, website and README.
 
-## 未发布（中文）
+## 1.7.1（中文）
 
 移除应用菜单、设置、官网和 README 中的赞助入口。
 

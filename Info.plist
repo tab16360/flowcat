@@ -10,8 +10,8 @@
 <key>LSHasLocalizedDisplayName</key><true/>
 <key>CFBundleIconFile</key><string>FlowCat.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.7.0</string>
-<key>CFBundleVersion</key><string>26</string>
+<key>CFBundleShortVersionString</key><string>1.7.1</string>
+<key>CFBundleVersion</key><string>27</string>
 <key>NSLocationUsageDescription</key><string>FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>FlowCat only reads the current Wi-Fi name to separate traffic by network. It never requests or stores your location.</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
