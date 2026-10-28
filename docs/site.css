@@ -133,9 +133,6 @@ summary::after { content: "+"; color: var(--muted); font-weight: 400; font-size:
 details[open] summary::after { content: "\2212"; }
 details p { color: var(--muted); margin: 12px 0 0; }
 
-/* Sponsor */
-.sponsor .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 40px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; }
-.sponsor p { color: var(--muted); margin: 0; }
 
 footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
@@ -159,7 +156,6 @@ footer .brand { color: var(--ink); margin-right: auto; }
   .cell.wide, .cell.narrow, .cell.third { grid-column: span 2; }
   .split { grid-template-columns: 1fr; gap: 36px; }
   .install ol { grid-template-columns: 1fr; }
-  .sponsor .box { grid-template-columns: 1fr; padding: 28px; }
   section { padding: 64px 0; }
 }
 @media (max-width: 640px) {

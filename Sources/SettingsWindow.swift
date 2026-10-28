@@ -8,12 +8,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     func show(_ monitor: TrafficMonitor) {
         monitor.refreshLoginStatus()
         if let window { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 600),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 540),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = tr("FlowCat Settings", "流量喵设置"); window.isReleasedWhenClosed = false; window.delegate = self
         // Assigning a controller resizes the window to its view; restore the fixed form size afterwards.
         window.contentViewController = NSHostingController(rootView: SettingsView(monitor: monitor, disk: monitor.disk, alerts: monitor.disk.alerts))
-        window.setContentSize(NSSize(width: 440, height: 600))
+        window.setContentSize(NSSize(width: 440, height: 540))
         self.window = window; window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
     func windowWillClose(_ notification: Notification) { window = nil }
@@ -60,11 +60,6 @@ struct SettingsView: View {
                     Button(tr("Check for Updates…", "检查更新…")) { UpdateChecker.shared.check() }
                 }
             } header: { Text(tr("General", "通用")) }
-            Section {
-                LabeledContent(tr("Enjoying FlowCat?", "喜欢流量喵？")) {
-                    Button(tr("Sponsor…", "赞助…")) { NSWorkspace.shared.open(Links.sponsor) }
-                }
-            }
-        }.formStyle(.grouped).frame(width: 440, height: 600).environment(\.locale, appLocale)
+        }.formStyle(.grouped).frame(width: 440, height: 540).environment(\.locale, appLocale)
     }
 }

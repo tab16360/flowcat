@@ -31,7 +31,6 @@ Open Settings with ⌘, or from the More menu.
 - **Menu Bar:** show today's total, network speed and disk read/write speed independently. Changes apply immediately. By default only the icon and network speed are shown.
 - **Network:** Include LAN in totals (see below).
 - **General:** Language (System default, English or 简体中文), Launch at login, Disk write alerts, version and Check for Updates.
-- **Sponsor:** opens the GitHub Sponsors page.
 
 ## Menu bar readout
 

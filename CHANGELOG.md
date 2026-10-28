@@ -1,5 +1,13 @@
 # 更新记录
 
+## Unreleased
+
+Removed the sponsor entry from the app menus, Settings, website and README.
+
+## 未发布（中文）
+
+移除应用菜单、设置、官网和 README 中的赞助入口。
+
 ## 1.7.0
 
 FlowCat is now licensed under the Apache License 2.0 (previously MIT).

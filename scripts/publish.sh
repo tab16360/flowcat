@@ -19,11 +19,11 @@ if [ "$owner" != tab16360 ]; then
 from pathlib import Path
 import sys
 owner = sys.argv[1]
-for filename in ['README.md', 'README.zh-CN.md', 'docs/index.html', 'docs/zh/index.html', 'Sources/Core.swift', '.github/FUNDING.yml']:
+for filename in ['README.md', 'README.zh-CN.md', 'docs/index.html', 'docs/zh/index.html']:
     p = Path(filename)
-    p.write_text(p.read_text().replace('github.com/tab16360/', f'github.com/{owner}/').replace('github.com/sponsors/tab16360', f'github.com/sponsors/{owner}').replace('tab16360.github.io', f'{owner}.github.io').replace('github: tab16360', f'github: {owner}'))
+    p.write_text(p.read_text().replace('github.com/tab16360/', f'github.com/{owner}/').replace('tab16360.github.io', f'{owner}.github.io'))
 PY
-  git add README.md README.zh-CN.md docs/index.html docs/zh/index.html Sources/Core.swift .github/FUNDING.yml
+  git add README.md README.zh-CN.md docs/index.html docs/zh/index.html
   git commit -m 'Set project publishing links'
 fi
 bash scripts/test.sh

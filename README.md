@@ -6,7 +6,7 @@ A native macOS menu bar app for **live network speed**, **per-process disk reads
 
 **Under 1 MB · No account · Data stays on your Mac · macOS 13+ · Apple Silicon · Apache-2.0**
 
-[Download](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [Website](https://tab16360.github.io/flowcat/) · [User guide](docs/guide.md) · [Changelog](CHANGELOG.md) · [Sponsor](https://github.com/sponsors/tab16360) · [简体中文](README.zh-CN.md)
+[Download](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [Website](https://tab16360.github.io/flowcat/) · [User guide](docs/guide.md) · [Changelog](CHANGELOG.md) · [简体中文](README.zh-CN.md)
 
 ![FlowCat in the menu bar with the network and disk activity panels](docs/assets/screens/hero-en.jpg)
 
@@ -93,8 +93,6 @@ CI runs the checks and builds the package. Pushes to `main` that touch `docs/` p
 
 A separate Windows version (C++20 / Win32 / Direct2D) lives in [flowcat-windows](https://github.com/tab16360/flowcat-windows). This repository maintains the macOS app.
 
-## Sponsor
-
-FlowCat is free and built in spare time. If it helped you catch a runaway process, consider [sponsoring on GitHub](https://github.com/sponsors/tab16360). Follow [@ai_funs](https://x.com/ai_funs) for updates.
+Follow [@ai_funs](https://x.com/ai_funs) for updates.
 
 Released under the [Apache License 2.0](LICENSE).

@@ -119,7 +119,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         _ = add(tr("Disk Write Alerts…", "磁盘写入提醒…"), action: #selector(openDiskAlerts))
         menu.addItem(.separator())
         _ = add(tr("Settings…", "设置…"), action: #selector(openSettings))
-        _ = add(tr("Sponsor FlowCat…", "赞助流量喵…"), action: #selector(openSponsor))
         _ = add(tr("Check for Updates…", "检查更新…"), action: #selector(checkUpdates))
         menu.addItem(.separator())
         _ = add(tr("Quit FlowCat", "退出流量喵"), action: #selector(quit))
@@ -180,7 +179,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
     @objc private func toggleMenuBarTotal() { monitor.showMenuBarTotal.toggle() }
     @objc private func toggleMenuBarSpeed() { monitor.showMenuBarSpeed.toggle() }
     @objc private func toggleRecording() { monitor.togglePause() }
-    @objc private func openSponsor() { NSWorkspace.shared.open(Links.sponsor) }
     @objc private func toggleIncludeLAN() { monitor.includeLAN.toggle() }
     @objc private func openSettings() { popover.performClose(nil); SettingsWindow.shared.show(monitor) }
     @objc private func exportNetworkCSV() { NSApp.activate(ignoringOtherApps: true); monitor.export() }
@@ -335,7 +333,7 @@ if let index = CommandLine.arguments.firstIndex(of: "--render-preview"), Command
     if CommandLine.arguments.contains("--dark") { app.appearance = NSAppearance(named: .darkAqua) }
     let alertPreview = CommandLine.arguments.contains("--alerts")
     let settingsPreview = CommandLine.arguments.contains("--settings")
-    let size = settingsPreview ? CGSize(width: 440, height: 490) : alertPreview ? CGSize(width: CommandLine.arguments.contains("--narrow") ? 510 : 620, height: 900) : CGSize(width: CommandLine.arguments.contains("--narrow") ? 342 : 460, height: CommandLine.arguments.contains("--short") ? 452 : 640)
+    let size = settingsPreview ? CGSize(width: 440, height: 540) : alertPreview ? CGSize(width: CommandLine.arguments.contains("--narrow") ? 510 : 620, height: 900) : CGSize(width: CommandLine.arguments.contains("--narrow") ? 342 : 460, height: CommandLine.arguments.contains("--short") ? 452 : 640)
     var alertModel = preview.disk.alerts
     if alertPreview {
         let suite = "flowcat-alert-preview-" + UUID().uuidString

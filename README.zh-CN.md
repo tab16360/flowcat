@@ -6,7 +6,7 @@
 
 **下载包不足 1 MB · 无需账号 · 数据全在本地 · macOS 13+ · Apple Silicon · Apache-2.0**
 
-[下载最新版](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [介绍站点](https://tab16360.github.io/flowcat/zh/) · [使用说明](docs/guide.zh-CN.md) · [更新记录](CHANGELOG.md) · [赞助](https://github.com/sponsors/tab16360) · [English](README.md)
+[下载最新版](https://github.com/tab16360/flowcat/releases/latest/download/FlowCat-arm64.zip) · [介绍站点](https://tab16360.github.io/flowcat/zh/) · [使用说明](docs/guide.zh-CN.md) · [更新记录](CHANGELOG.md) · [English](README.md)
 
 关注作者 [@ai_funs](https://x.com/ai_funs)，获取流量喵更新与 AI 工具实践。
 
@@ -128,9 +128,5 @@ CI 检查核心统计并生成安装包。`main` 上的站点更新由 GitHub Pa
 Windows 版已迁入独立仓库：[flowcat-windows](https://github.com/tab16360/flowcat-windows)。使用 C++20 / Win32 / Direct2D，后台采集服务与普通权限托盘界面分离，提供独立安装器、Wi-Fi 筛选、设置与更新渠道。
 
 [Windows 介绍与下载](https://tab16360.github.io/flowcat/windows/)。本仓库继续维护 macOS 版。
-
-## 赞助
-
-流量喵免费开源，利用业余时间开发。如果它帮你揪出过失控的进程，欢迎在 [GitHub 赞助](https://github.com/sponsors/tab16360)。
 
 采用 [Apache License 2.0](LICENSE) 许可证。

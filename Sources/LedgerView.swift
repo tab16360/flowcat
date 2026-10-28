@@ -141,7 +141,6 @@ struct LedgerView: View {
                 Divider()
                 Button(tr("Settings…", "设置…")) { SettingsWindow.shared.show(monitor); close() }.keyboardShortcut(",")
                 Button(tr("Check for Updates…", "检查更新…")) { UpdateChecker.shared.check() }
-                Button(tr("Sponsor FlowCat…", "赞助流量喵…")) { NSWorkspace.shared.open(Links.sponsor) }
                 Divider()
                 Button(tr("Quit FlowCat", "退出流量喵")) { monitor.save(); NSApp.terminate(nil) }.keyboardShortcut("q")
             } label: {

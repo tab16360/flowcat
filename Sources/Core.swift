@@ -25,11 +25,6 @@ final class Localization: ObservableObject {
         }
     }
 }
-enum Links {
-    static let repository = URL(string: "https://github.com/tab16360/flowcat")!
-    // One place to change the sponsor destination for the app, site and README.
-    static let sponsor = URL(string: "https://github.com/sponsors/tab16360")!
-}
 // Dates follow the app language rather than the system region.
 var appLocale: Locale { Locale(identifier: Localization.shared.isChinese ? "zh_Hans_CN" : "en_US") }
 func appDate(_ date: Date, date dateStyle: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
